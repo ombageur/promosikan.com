@@ -1,6 +1,0 @@
-import { z } from "zod";
-
-export const credentialsSchema = z.object({ email: z.email().max(254), password: z.string().min(10).max(128) });
-export const registerSchema = credentialsSchema.extend({ name: z.string().trim().min(2).max(100), workspaceName: z.string().trim().min(2).max(100) });
-export const profileSchema = z.object({ name: z.string().trim().min(2).max(100), website: z.union([z.url(), z.literal("")]).optional(), description: z.string().max(2000).default(""), industry: z.string().max(100).optional(), location: z.string().max(150).optional(), targetMarket: z.string().max(500).optional(), strengths: z.string().max(1000).optional(), contact: z.string().max(200).optional(), language: z.enum(["id", "en"]).default("id"), brandVoice: z.string().max(200).optional() });
-export const serviceSchema = z.object({ name: z.string().trim().min(2).max(100), category: z.string().max(100).optional(), description: z.string().trim().min(5).max(2000), benefits: z.string().max(1000).optional(), targetCustomer: z.string().max(500).optional(), problemSolved: z.string().max(500).optional(), priceRange: z.string().max(100).optional(), usp: z.string().max(500).optional(), landingUrl: z.union([z.url(), z.literal("")]).optional(), active: z.boolean().default(true) });

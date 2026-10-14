@@ -1,0 +1,10 @@
+rules_version = '2';
+
+// Fase 0: tolak semua akses client. Aturan logo workspace ditambahkan di Fase 1 (SPEC §15).
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -38,11 +38,11 @@ Spesifikasi lengkap ada di [SPEC.md](SPEC.md). Setiap fase punya tujuan, cakupan
 
 **Bukan cakupan:** fitur apa pun.
 
-**DoD:**
-- [ ] `npm run dev` menampilkan halaman kosong ber-brand. `npm run emulators` menyalakan Auth, Firestore, Functions, Storage, dan Hosting.
-- [ ] Tidak ada sisa dependensi atau berkas Next/Prisma.
-- [ ] Tes `shared/scoring` lulus.
-- [ ] CI hijau.
+**DoD:** ✅ selesai 2026-10-14 (branch `phase-0-migration`)
+- [x] `npm run dev` menampilkan halaman kosong ber-brand. `npm run emulators` menyalakan Auth, Firestore, Functions, Storage, dan Hosting.
+- [x] Tidak ada sisa dependensi atau berkas Next/Prisma.
+- [x] Tes `shared/scoring` lulus.
+- [x] CI hijau.
 
 ---
 

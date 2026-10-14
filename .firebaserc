@@ -1,0 +1,6 @@
+{
+  "projects": {
+    "default": "promosikan-com",
+    "production": "promosikan-com"
+  }
+}
