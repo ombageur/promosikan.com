@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { DEMO_OFFERINGS } from "@shared/demo/publishAgency";
 import { offeringSchema } from "@shared/schemas/catalog";
 import { opportunityScore, scoreBand } from "@shared/scoring";
-import { demoIntelligence, emptyIntelligence, memoryCatalog } from "./memorySources";
+import { demoIntelligence, memoryCatalog } from "./memorySources";
 
 describe("memoryCatalog (demo publik)", () => {
   it("berisi katalog Publish Agency dan mendukung CRUD lokal", async () => {
@@ -66,11 +66,8 @@ describe("demoIntelligence", () => {
   });
 });
 
-describe("emptyIntelligence", () => {
-  it("tidak menyediakan data apa pun untuk workspace nyata", async () => {
-    const intel = emptyIntelligence();
-    expect(intel.available).toBe(false);
-    expect(await intel.listOpportunities()).toEqual([]);
-    await expect(intel.updateLead("x", { status: "lost" })).rejects.toThrow();
+describe("demoIntelligence: kapabilitas", () => {
+  it("data demo tidak pernah memakai AI sungguhan", () => {
+    expect(demoIntelligence().capabilities.ai).toBe(false);
   });
 });

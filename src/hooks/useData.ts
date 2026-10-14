@@ -2,8 +2,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { AutomationSettings } from "@shared/schemas/automation";
 import type { Keyword, KeywordGroup, Offering } from "@shared/schemas/catalog";
-import type { LeadStatus, ReplyDraftStatus } from "@shared/types/intelligence";
+import type { AnalyzeConversationInput, GenerateReplyInput } from "@shared/schemas/ai";
+import type { LeadStatus, OpportunityStatus, ReplyDraftStatus } from "@shared/types/intelligence";
 import { errorMessage } from "@/lib/firebase/callable";
+import { analyzeConversation, generateReply, validateReply } from "@/services/ai";
 import { useWorkspace } from "./useWorkspace";
 
 /** Query key per sumber data, agar cache workspace/demo tidak tercampur. */
@@ -19,7 +21,7 @@ function useInvalidate() {
 }
 
 /** Mutasi standar: toast sukses/gagal + invalidasi query terkait. */
-function useAction<I>(fn: (input: I) => Promise<unknown>, invalidates: string[], success?: string) {
+function useAction<I, O = unknown>(fn: (input: I) => Promise<O>, invalidates: string[], success?: string) {
   const invalidate = useInvalidate();
   return useMutation({
     mutationFn: fn,
@@ -130,4 +132,38 @@ export function useUpdateLead() {
 export function useDailyStats() {
   const { data } = useWorkspace();
   return useQuery({ queryKey: useKey()("dailyStats"), queryFn: () => data.intelligence.listDailyStats() });
+}
+
+// ---------- Aksi AI (Fase 3) ----------
+export function useCapabilities() {
+  return useWorkspace().data.intelligence.capabilities;
+}
+
+export function useSetOpportunityStatus() {
+  const { data } = useWorkspace();
+  return useAction(
+    ({ id, status }: { id: string; status: OpportunityStatus }) => data.intelligence.setOpportunityStatus(id, status),
+    ["opportunities"],
+  );
+}
+
+export function useAnalyzeConversation() {
+  const { workspace } = useWorkspace();
+  return useAction(
+    (input: Omit<AnalyzeConversationInput, "workspaceId">) => analyzeConversation({ ...input, workspaceId: workspace.id }),
+    ["opportunities"],
+  );
+}
+
+export function useGenerateReply() {
+  const { workspace } = useWorkspace();
+  return useAction(
+    (input: Omit<GenerateReplyInput, "workspaceId">) => generateReply({ ...input, workspaceId: workspace.id }),
+    ["replyDrafts"],
+  );
+}
+
+export function useValidateReply() {
+  const { workspace } = useWorkspace();
+  return useAction((draftId: string) => validateReply({ workspaceId: workspace.id, draftId }), ["replyDrafts"]);
 }

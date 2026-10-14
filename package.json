@@ -15,7 +15,8 @@
     "test": "vitest run",
     "emulators": "npm --prefix functions run build && firebase emulators:start --project demo-promosikan",
     "postinstall": "npm --prefix functions install --no-audit --no-fund",
-    "test:emulator": "npm --prefix functions run build && firebase emulators:exec --only auth,firestore,storage,functions --project demo-promosikan \"vitest run --config vitest.emulator.config.ts\""
+    "test:emulator": "npm --prefix functions run build && firebase emulators:exec --only auth,firestore,storage,functions --project demo-promosikan \"vitest run --config vitest.emulator.config.ts\"",
+    "eval:ai": "npm --prefix functions run eval:ai --"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",

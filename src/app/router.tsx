@@ -30,6 +30,8 @@ function workspacePages({ withMembers }: { withMembers: boolean }): RouteObject[
 
 export const router = createBrowserRouter([
   { path: "/", element: <HomePage /> },
+  { path: "/privacy", lazy: page(() => import("@/pages/legal/PrivacyPage"), (m) => m.PrivacyPage) },
+  { path: "/terms", lazy: page(() => import("@/pages/legal/TermsPage"), (m) => m.TermsPage) },
   { path: "/demo", lazy: page(() => import("@/pages/demo/DemoRoute"), (m) => m.DemoRoute), children: workspacePages({ withMembers: false }) },
   {
     element: <GuestOnly />,

@@ -15,7 +15,8 @@ Platform AI multi-tenant untuk customer discovery dan smart promotion: menemukan
 | 0 — Migrasi & Fondasi | ✅ selesai |
 | 1 — Auth, Workspace & RBAC | ✅ selesai |
 | 2 — App Shell, Katalog & Demo Mode | ✅ selesai |
-| 3 — AI Intelligence | berikutnya |
+| 3 — AI Intelligence | ✅ selesai (eval belum dijalankan dengan API key) |
+| 4 — Integrasi Threads | berikutnya (butuh App Review Meta) |
 
 Yang sudah berfungsi:
 
@@ -26,7 +27,9 @@ Yang sudah berfungsi:
 - **Katalog & keyword (nyata di Firestore):** Products & Services, grup keyword yang ditautkan ke layanan, aktif/nonaktif keyword, dan pengaturan Automation (approval manual selalu wajib).
 - **Semua halaman dashboard:** Overview, Discover, Opportunities, Smart Match, Reply Center, Leads CRM (Kanban), Analytics, Integrations, Billing. Untuk workspace nyata, halaman berbasis data AI menampilkan state kosong sampai fasenya dikerjakan — tidak ada data palsu.
 - **Demo:** `/demo` publik tanpa login (data di memori browser), dan tombol **Coba workspace demo** yang membuat workspace berisi katalog Publish Agency. Semua data simulasi diberi banner **Data Demo** dan tidak pernah dikirim ke platform sosial.
-- Skema data: [docs/FIRESTORE_SCHEMA.md](docs/FIRESTORE_SCHEMA.md).
+- **AI (Claude):** Analisis Manual di Discover (skor peluang, masalah pelanggan, kecocokan katalog), draft balasan dengan guardrails (buat ulang, persingkat, ganti nada), dan pemeriksaan kualitas. Kuota 200 panggilan AI/bulan per workspace + rate limit per pengguna.
+- **Legal:** [/privacy](src/pages/legal/PrivacyPage.tsx) dan [/terms](src/pages/legal/TermsPage.tsx) — tinjau isinya sebelum App Review Meta.
+- Skema data: [docs/FIRESTORE_SCHEMA.md](docs/FIRESTORE_SCHEMA.md). Catatan Threads API: [docs/THREADS_API_NOTES.md](docs/THREADS_API_NOTES.md).
 
 ## Prasyarat
 
@@ -42,6 +45,12 @@ cp .env.example .env.local   # VITE_USE_EMULATORS=true untuk development
 npm run emulators            # Auth, Firestore, Functions, Storage, Hosting + UI di http://127.0.0.1:4000
 npm run dev                  # di terminal lain → http://localhost:5173
 ```
+
+### AI saat pengembangan lokal
+
+Tanpa API key, buat `functions/.env.local` berisi `AI_FAKE=true` dan `functions/.secret.local` berisi `ANTHROPIC_API_KEY=fake` (keduanya diabaikan git). Functions emulator lalu memakai **AI tiruan** deterministik — hanya aktif di emulator, tidak pernah di produksi. Untuk memakai Claude sungguhan di emulator, hapus `AI_FAKE` dan isi key asli di `functions/.secret.local`.
+
+Eval kualitas analisis (memanggil Claude sungguhan, berbayar): `ANTHROPIC_API_KEY=… npm run eval:ai -- --yes`. Tanpa `--yes` hanya menampilkan rencana & estimasi biaya.
 
 Dengan `VITE_USE_EMULATORS=true`, aplikasi memakai project emulator `demo-promosikan` dan tidak menyentuh project cloud. Link verifikasi email dan reset kata sandi di emulator tidak dikirim ke inbox — buka di log terminal emulator atau di Emulator UI (tab Authentication). Login Google di emulator memakai akun tiruan. Untuk menyambung ke project nyata `promosikan-com`, isi variabel `VITE_FIREBASE_*` dari Firebase Console dan set `VITE_USE_EMULATORS=false`.
 
@@ -82,7 +91,7 @@ docs/       SPEC, ROADMAP
 1. Firebase Console → Authentication: aktifkan provider **Email/Password** dan **Google**; tambahkan domain produksi di *Authorized domains*.
 2. Buat database **Firestore** dan bucket **Storage** (region sesuai keputusan #5 di SPEC §26).
 3. Upgrade ke paket **Blaze** (wajib untuk Cloud Functions).
-4. Buat `functions/.env.promosikan-com` dari `functions/.env.example`.
+4. Buat `functions/.env.promosikan-com` dari `functions/.env.example`, lalu `npx firebase functions:secrets:set ANTHROPIC_API_KEY` dan atur batas pengeluaran di Anthropic Console.
 5. Opsional: pasang Firebase Extension **Trigger Email** (koleksi `mail`) agar undangan terkirim lewat email.
 
 ## Deploy

@@ -1,6 +1,6 @@
 # Skema Firestore
 
-Status per Fase 2. Sumber kebenaran validasi ada di `shared/schemas/*` (Zod) dan dicerminkan di [`firestore.rules`](../firestore.rules). Tes di [`tests/rules/`](../tests/rules) memastikan keduanya selaras.
+Status per Fase 3. Sumber kebenaran validasi ada di `shared/schemas/*` (Zod) dan dicerminkan di [`firestore.rules`](../firestore.rules). Tes di [`tests/rules/`](../tests/rules) memastikan keduanya selaras.
 
 Keterangan kolom **Penulis**:
 - **Client**: ditulis langsung dari browser dan dibatasi Security Rules.
@@ -32,6 +32,10 @@ Keterangan kolom **Penulis**:
 | `offerings/{id}` | Client | `catalog.manage` | `offeringSchema`: `name`, `type`, `category`, `description`, `benefits[]` (≤10), `targetAudience`, `problemsSolved[]` (≤10), `keywords[]` (≤20), `priceRange`, `usp`, `landingPageUrl`, `allowedClaims[]` (≤10), `isActive` |
 | `keywordGroups/{id}` | Client | `catalog.manage` | `name`, `offeringId` (nullable) |
 | `keywords/{id}` | Client | `catalog.manage` | `term`, `groupId` (nullable), `offeringId` (nullable), `isActive` |
+| `opportunities/{id}` | Backend (client: `status` saja, `reply.edit`) | — | `post{platform,text,authorName,authorHandle,postedAt,permalink,matchedKeyword}`, `intent`, `customerProblem`, `subScores`, `score`, `band` (dihitung `shared/scoring`), `reasons`, `redFlags`, `matches[≤3]`, `analysisStatus` (`ok`/`refused`), `status` (`new`/`saved`/`skipped`), `source`, `promptVersion`, `model`, `createdAt`, `createdBy` |
+| `replyDrafts/draft_{opportunityId}` | Backend (client: `text` & `status` draft/pending_approval/skipped, `reply.edit`) | — | `opportunityId`, `text` (≤300), `style`, `status`, `quality{passed,notes,checkedAt}`, `publishable`, `promptVersion`, `model`, `createdAt`, `updatedAt`, `updatedBy` |
+| `usage/{yyyy-mm}` | Backend | — | `aiCalls`, token input/output/cache, `costUsd` (estimasi biaya platform), `calls.{route}`. Bisa dibaca Owner/Admin. |
+| `usage/rate_{uid}` | Backend | — | Rate limit AI per menit |
 | `settings/automation` | Client | `automation.manage` | `automationSettingsSchema`. `manualApproval` selalu `true`. Dokumen lain di `settings/` ditolak. |
 
 Dokumen katalog yang ditulis client wajib membawa jejak penulis:
@@ -39,9 +43,9 @@ Dokumen katalog yang ditulis client wajib membawa jejak penulis:
 - `updatedAt` = `request.time` dan `updatedBy` = uid di setiap penulisan.
 - Field di luar skema ditolak (`keys().hasOnly`).
 
-### Direncanakan (Fase 3–7, belum ada di rules)
+### Direncanakan (Fase 4–7, belum ada di rules)
 
-`socialAccounts`, `socialPosts`, `opportunities`, `replyDrafts`, `replyAttempts`, `leads` (+ `activities`), `monitoringRuns`, `usage`, `stats`. Bentuk datanya sudah didefinisikan sebagai tipe di `shared/types/intelligence.ts` dan dipakai oleh data demo. Semuanya ditulis oleh backend, kecuali field CRM tertentu di `leads`.
+`socialAccounts`, `socialPosts`, `replyAttempts`, `leads` (+ `activities`), `monitoringRuns`, `stats`. Bentuk datanya sudah didefinisikan sebagai tipe di `shared/types/intelligence.ts` dan dipakai oleh data demo. Semuanya ditulis oleh backend, kecuali field CRM tertentu di `leads`.
 
 ## Index
 

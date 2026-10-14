@@ -1,6 +1,6 @@
 import type { AutomationSettings } from "@shared/schemas/automation";
 import type { Keyword, KeywordGroup, Offering } from "@shared/schemas/catalog";
-import type { DailyStats, Lead, LeadStatus, Opportunity, ReplyDraft, ReplyDraftStatus } from "@shared/types/intelligence";
+import type { DailyStats, Lead, LeadStatus, Opportunity, OpportunityStatus, ReplyDraft, ReplyDraftStatus } from "@shared/types/intelligence";
 
 export type WithId<T> = T & { id: string };
 
@@ -23,13 +23,24 @@ export interface CatalogSource {
   saveAutomationSettings(data: AutomationSettings): Promise<void>;
 }
 
-/**
- * Hasil discovery & AI. Di Fase 2 hanya tersedia untuk data demo; workspace nyata
- * memakai sumber kosong (`available: false`) sampai pipeline Fase 3–5 berjalan.
- */
+/** Fitur intelijen yang sudah tersedia untuk sumber data ini (bertambah per fase). */
+export type IntelligenceCapabilities = {
+  /** Peluang hasil analisis (Fase 3: Analisis Manual; Fase 4: monitoring). */
+  opportunities: boolean;
+  drafts: boolean;
+  /** Lead CRM (Fase 5). */
+  leads: boolean;
+  /** Statistik agregat (Fase 6). */
+  stats: boolean;
+  /** Panggilan AI nyata (Claude). Selalu false untuk data demo. */
+  ai: boolean;
+};
+
+/** Hasil discovery & AI: Firestore untuk workspace nyata, fixtures di memori untuk demo. */
 export interface IntelligenceSource {
-  available: boolean;
+  capabilities: IntelligenceCapabilities;
   listOpportunities(): Promise<Opportunity[]>;
+  setOpportunityStatus(id: string, status: OpportunityStatus): Promise<void>;
   listReplyDrafts(): Promise<ReplyDraft[]>;
   updateReplyDraft(id: string, patch: { text?: string; status?: ReplyDraftStatus }): Promise<void>;
   listLeads(): Promise<Lead[]>;

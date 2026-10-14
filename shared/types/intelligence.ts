@@ -5,7 +5,8 @@ import type { ReplyStyle } from "../schemas/automation";
  * Tipe data hasil discovery & AI (SPEC §8–§13). Di Fase 2 hanya diisi data demo;
  * skema Zod dan penulisan oleh backend ditambahkan di Fase 3–5.
  */
-export type Platform = "threads";
+/** `manual` = teks yang ditempel pengguna (Analisis Manual, Fase 3). */
+export type Platform = "threads" | "manual";
 
 export const INTENTS = ["active_search", "asking_recommendation", "problem_aware", "comparing", "general_discussion"] as const;
 export type Intent = (typeof INTENTS)[number];
@@ -53,6 +54,10 @@ export type Opportunity = {
   /** Maksimal 3, terurut dari skor tertinggi. Kosong = tidak ada yang cocok. */
   matches: OfferingMatch[];
   status: OpportunityStatus;
+  /** `refused` = AI menolak menganalisis; perlakukan sebagai review manual. */
+  analysisStatus?: "ok" | "refused";
+  /** ISO 8601, kapan peluang dibuat. */
+  createdAt?: string;
 };
 
 export const REPLY_DRAFT_STATUSES = [
@@ -83,7 +88,10 @@ export type ReplyDraft = {
   text: string;
   style: ReplyStyle;
   status: ReplyDraftStatus;
-  quality: { passed: boolean; notes: string[] };
+  /** `checkedAt` (ISO) lebih lama dari `updatedAt` = teks sudah diubah sejak dicek. */
+  quality: { passed: boolean; notes: string[]; checkedAt?: string | null };
+  /** ISO 8601, perubahan teks terakhir. */
+  updatedAt?: string;
   /** Apakah API mengizinkan membalas post ini (Fase 5). */
   publishable: boolean;
 };

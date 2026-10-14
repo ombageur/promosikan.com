@@ -115,12 +115,18 @@ Spesifikasi lengkap ada di [SPEC.md](SPEC.md). Setiap fase punya tujuan, cakupan
 - Halaman Kebijakan Privasi dan Syarat Layanan (dibutuhkan untuk App Review Meta).
 - **Mulai pengajuan App Review Meta.** Sebelum itu, tulis `docs/THREADS_API_NOTES.md` dari dokumentasi resmi.
 
-**DoD:**
-- [ ] Output AI yang tidak valid menurut Zod ditolak dan dicatat, tanpa membuat aplikasi crash.
-- [ ] Ada tes unit dengan klien Claude tiruan (mock) untuk parsing, skor, kasus "tidak ada yang cocok", dan kegagalan API.
-- [ ] Ada set evaluasi berisi ≥ 30 contoh post berbahasa Indonesia (dengan label yang diharapkan), dan skrip `npm run eval:ai` melaporkan akurasi klasifikasi.
-- [ ] Kuota habis menghasilkan pesan yang jelas, dan tidak ada panggilan Claude API yang terjadi.
-- [ ] Tidak ada secret di bundle frontend (diverifikasi dengan grep pada `dist/`).
+**DoD:** 4 dari 5 terpenuhi (2026-10-15, branch `phase-3-ai`); eval belum dijalankan terhadap Claude sungguhan.
+- [x] Output AI yang tidak valid menurut Zod ditolak dan dicatat, tanpa membuat aplikasi crash. — `runAi` + tes "output tidak valid/tidak lengkap" di `functions/src/ai/ai.test.ts`
+- [x] Ada tes unit dengan klien Claude tiruan (mock) untuk parsing, skor, kasus "tidak ada yang cocok", dan kegagalan API. — `ai.test.ts` (16 tes) + `units.test.ts`
+- [ ] Ada set evaluasi berisi ≥ 30 contoh post berbahasa Indonesia (dengan label yang diharapkan), dan skrip `npm run eval:ai` melaporkan akurasi klasifikasi. — **dataset (32 kasus) & skrip selesai; belum dijalankan** karena belum ada `ANTHROPIC_API_KEY` di lingkungan pengembangan. Jalankan: `ANTHROPIC_API_KEY=… npm run eval:ai -- --yes` (perkiraan < US$1).
+- [x] Kuota habis menghasilkan pesan yang jelas, dan tidak ada panggilan Claude API yang terjadi. — tes kuota & rate limit memastikan klien tiruan tidak dipanggil
+- [x] Tidak ada secret di bundle frontend (diverifikasi dengan grep pada `dist/`). — grep `sk-ant|ANTHROPIC_API_KEY|anthropic-ai|client_secret|THREADS_APP_SECRET`: kosong
+
+**Catatan Fase 3:**
+- `analyzePost` (task queue) dipindah ke Fase 4 bersama `socialPosts`, karena belum ada sumber post otomatis untuk diuji. Logika intinya (`buildOpportunityFields`, prompt, `runAi`) sudah dipakai bersama.
+- Smoke test UI di browser (emulator + AI tiruan `AI_FAKE=true`): Analisis Manual → peluang → draft → persingkat → sunting → periksa ulang → pemakaian tercatat.
+- Workspace demo tidak memanggil AI (server menolak); demo publik menampilkan contoh hasil.
+- App Review Meta: checklist di `docs/THREADS_API_NOTES.md` §5 — tugas pemilik produk.
 
 ---
 

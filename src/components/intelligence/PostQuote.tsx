@@ -1,7 +1,9 @@
 import { ExternalLink } from "lucide-react";
-import type { DiscoveredPost } from "@shared/types/intelligence";
+import type { DiscoveredPost, Platform } from "@shared/types/intelligence";
 import { cn } from "@/lib/utils";
 import { formatRelativeDay } from "@/utils/format";
+
+const PLATFORM_LABELS: Record<Platform, string> = { threads: "Threads", manual: "Analisis manual" };
 
 /** Kutipan post sosial asli, dengan tautan hanya jika post punya permalink nyata. */
 export function PostQuote({ post, className, clamp }: { post: DiscoveredPost; className?: string; clamp?: boolean }) {
@@ -9,9 +11,9 @@ export function PostQuote({ post, className, clamp }: { post: DiscoveredPost; cl
     <figure className={cn("grid gap-1.5", className)}>
       <figcaption className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
         <span className="font-semibold text-foreground">{post.authorName}</span>
-        <span>{post.authorHandle}</span>
+        {post.authorHandle && post.authorHandle !== post.authorName && <span>{post.authorHandle}</span>}
         <span aria-hidden>·</span>
-        <span>Threads</span>
+        <span>{PLATFORM_LABELS[post.platform]}</span>
         <span aria-hidden>·</span>
         <time dateTime={post.postedAt}>{formatRelativeDay(post.postedAt)}</time>
         {post.permalink && (

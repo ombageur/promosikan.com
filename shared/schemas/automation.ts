@@ -38,3 +38,7 @@ export type AutomationSettings = z.infer<typeof automationSettingsSchema>;
 export type AutomationSettingsInput = z.input<typeof automationSettingsSchema>;
 
 export const DEFAULT_AUTOMATION_SETTINGS: AutomationSettings = automationSettingsSchema.parse({});
+
+export function isReplyStyle(value: unknown): value is ReplyStyle {
+  return typeof value === "string" && (REPLY_STYLES as readonly string[]).includes(value);
+}

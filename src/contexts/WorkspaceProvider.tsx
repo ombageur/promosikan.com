@@ -3,7 +3,8 @@ import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { can as roleCan, isRole, type Role } from "@shared/permissions";
 import { useCurrentUser } from "@/hooks/useAuth";
 import { firestoreCatalog } from "@/services/data/firestoreCatalog";
-import { demoIntelligence, emptyIntelligence } from "@/services/data/memorySources";
+import { firestoreIntelligence } from "@/services/data/firestoreIntelligence";
+import { demoIntelligence } from "@/services/data/memorySources";
 import type { DataSource } from "@/services/data/types";
 import { setLastWorkspace } from "@/services/users";
 import { memberDoc, toWorkspace, workspaceDoc } from "@/services/workspaces";
@@ -67,13 +68,13 @@ export function WorkspaceProvider({ workspaceId, children, fallback }: Props) {
     if (ready) setLastWorkspace(user.uid, workspaceId).catch(() => undefined);
   }, [ready, user.uid, workspaceId]);
 
-  // Katalog selalu dari Firestore. Data peluang/lead: demo untuk workspace demo, kosong untuk workspace nyata.
+  // Katalog selalu dari Firestore. Peluang/draft: fixtures untuk workspace demo, Firestore untuk workspace nyata.
   const isDemo = snapshot.workspace?.isDemo ?? false;
   const data = useMemo<DataSource>(
     () => ({
       key: `ws:${workspaceId}:${isDemo ? "demo" : "live"}`,
       catalog: firestoreCatalog(workspaceId),
-      intelligence: isDemo ? demoIntelligence() : emptyIntelligence(),
+      intelligence: isDemo ? demoIntelligence() : firestoreIntelligence(workspaceId),
     }),
     [workspaceId, isDemo],
   );

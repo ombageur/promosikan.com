@@ -31,7 +31,7 @@ export function SmartMatchPage() {
           </Link>
         </CardContent>
       </Card>
-      {!data.intelligence.available ? (
+      {!data.intelligence.capabilities.opportunities ? (
         <NotYetAvailable icon={Sparkles} title="Belum ada hasil pencocokan" description="Smart Match berjalan bersama analisis AI di Fase 3." />
       ) : (
         <QueryBoundary query={opportunities}>

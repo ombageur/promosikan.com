@@ -62,7 +62,7 @@ export function LeadsPage() {
   return (
     <>
       <PageHeader title="Leads CRM" description="Pipeline calon pelanggan dari percakapan sampai konversi." />
-      {!data.intelligence.available ? (
+      {!data.intelligence.capabilities.leads ? (
         <NotYetAvailable icon={Users} title="Belum ada lead" description="Lead dibuat dari peluang yang dibalas atau ditandai manual (Fase 5)." />
       ) : (
         <>

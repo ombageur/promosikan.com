@@ -1,8 +1,9 @@
-import { CheckCircle2, ExternalLink, MessageCircle, Send } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ExternalLink, MessageCircle, RefreshCw, Scissors, Send, XCircle } from "lucide-react";
 import { useState } from "react";
-import { useSearchParams } from "react-router";
+import { Link, useSearchParams } from "react-router";
 import { toast } from "sonner";
-import { REPLY_STYLE_LABELS } from "@shared/schemas/automation";
+import { REPLY_MAX_CHARS } from "@shared/schemas/ai";
+import { REPLY_STYLE_LABELS, REPLY_STYLES, type ReplyStyle } from "@shared/schemas/automation";
 import { type Opportunity, type ReplyDraft, REPLY_DRAFT_STATUS_LABELS } from "@shared/types/intelligence";
 import { ScoreBadge } from "@/components/intelligence/badges";
 import { PostQuote } from "@/components/intelligence/PostQuote";
@@ -13,19 +14,66 @@ import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { useOpportunities, useReplyDrafts, useUpdateReplyDraft } from "@/hooks/useData";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useCapabilities, useGenerateReply, useOpportunities, useReplyDrafts, useUpdateReplyDraft, useValidateReply } from "@/hooks/useData";
 import { useWorkspace } from "@/hooks/useWorkspace";
 import { cn } from "@/lib/utils";
 
-const MAX_REPLY = 500; // Batas karakter Threads; diverifikasi ulang di Fase 4.
+const STYLE_ITEMS = REPLY_STYLES.map((s) => ({ value: s, label: REPLY_STYLE_LABELS[s] }));
+
+/** Teks diubah setelah pemeriksaan kualitas terakhir → hasil pemeriksaan tidak berlaku lagi. */
+function qualityIsStale(draft: ReplyDraft) {
+  const { checkedAt } = draft.quality;
+  return Boolean(checkedAt && draft.updatedAt && draft.updatedAt > checkedAt);
+}
+
+function AiActions({ draft }: { draft: ReplyDraft }) {
+  const generate = useGenerateReply();
+  const busy = generate.isPending;
+  return (
+    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed p-2">
+      <span className="px-1 text-xs font-medium text-muted-foreground">AI:</span>
+      <Button size="sm" variant="outline" disabled={busy} onClick={() => generate.mutate({ opportunityId: draft.opportunityId, adjustment: "regenerate" })}>
+        <RefreshCw aria-hidden />
+        Buat ulang
+      </Button>
+      <Button size="sm" variant="outline" disabled={busy} onClick={() => generate.mutate({ opportunityId: draft.opportunityId, adjustment: "shorter" })}>
+        <Scissors aria-hidden />
+        Persingkat
+      </Button>
+      <Select
+        items={STYLE_ITEMS}
+        value={draft.style}
+        onValueChange={(v) => v && v !== draft.style && generate.mutate({ opportunityId: draft.opportunityId, style: v as ReplyStyle, adjustment: "regenerate" })}
+        disabled={busy}
+      >
+        <SelectTrigger size="sm" className="w-44" aria-label="Ganti nada balasan">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {STYLE_ITEMS.map((item) => (
+            <SelectItem key={item.value} value={item.value}>
+              {item.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {busy && <span className="text-xs text-muted-foreground" role="status">Menyusun…</span>}
+    </div>
+  );
+}
 
 function DraftEditor({ draft, opp }: { draft: ReplyDraft; opp: Opportunity }) {
   const { can } = useWorkspace();
+  const caps = useCapabilities();
   const update = useUpdateReplyDraft();
+  const validate = useValidateReply();
   const [text, setText] = useState(draft.text);
-  const editable = can("reply.edit") && draft.status !== "skipped";
+  const editable = can("reply.edit") && (draft.status === "draft" || draft.status === "pending_approval");
   const dirty = text !== draft.text;
   const top = opp.matches[0];
+  const stale = qualityIsStale(draft);
+  const QualityIcon = stale ? AlertTriangle : draft.quality.passed ? CheckCircle2 : XCircle;
 
   return (
     <div className="grid gap-4">
@@ -55,18 +103,28 @@ function DraftEditor({ draft, opp }: { draft: ReplyDraft; opp: Opportunity }) {
             id="draft-text"
             rows={6}
             value={text}
-            maxLength={MAX_REPLY}
+            maxLength={REPLY_MAX_CHARS}
             onChange={(e) => setText(e.target.value)}
             disabled={!editable}
           />
           <p className="text-right text-xs text-muted-foreground tabular-nums">
-            {text.length}/{MAX_REPLY}
+            {text.length}/{REPLY_MAX_CHARS}
           </p>
+          {caps.ai && can("ai.use") && editable && <AiActions draft={draft} />}
           <div className="rounded-lg bg-slate-50 p-3 text-xs">
-            <p className="flex items-center gap-1.5 font-semibold">
-              <CheckCircle2 className="size-4 text-success" aria-hidden />
-              Pemeriksaan kualitas {draft.quality.passed ? "lolos" : "gagal"}
-            </p>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="flex items-center gap-1.5 font-semibold">
+                <QualityIcon className={cn("size-4", stale ? "text-warning" : draft.quality.passed ? "text-success" : "text-destructive")} aria-hidden />
+                {stale
+                  ? "Teks diubah setelah pemeriksaan — periksa ulang"
+                  : `Pemeriksaan kualitas ${draft.quality.passed ? "lolos" : "tidak lolos"}`}
+              </p>
+              {caps.ai && editable && (
+                <Button size="xs" variant="outline" disabled={validate.isPending || dirty} onClick={() => validate.mutate(draft.id)}>
+                  {validate.isPending ? "Memeriksa…" : "Periksa kualitas"}
+                </Button>
+              )}
+            </div>
             <ul className="mt-1 list-disc pl-5 text-muted-foreground">
               {draft.quality.notes.map((n) => (
                 <li key={n}>{n}</li>
@@ -83,9 +141,13 @@ function DraftEditor({ draft, opp }: { draft: ReplyDraft; opp: Opportunity }) {
                 Simpan draft
               </Button>
             )}
-            {editable && (
-              <Button variant="ghost" disabled={update.isPending} onClick={() => update.mutate({ id: draft.id, status: "skipped" })}>
-                Lewati
+            {can("reply.edit") && (draft.status === "draft" || draft.status === "pending_approval" || draft.status === "skipped") && (
+              <Button
+                variant="ghost"
+                disabled={update.isPending}
+                onClick={() => update.mutate({ id: draft.id, status: draft.status === "skipped" ? "draft" : "skipped" })}
+              >
+                {draft.status === "skipped" ? "Batalkan lewati" : "Lewati"}
               </Button>
             )}
             <Button disabled title="Publikasi lewat Threads API tersedia di Fase 5">
@@ -106,7 +168,7 @@ function DraftEditor({ draft, opp }: { draft: ReplyDraft; opp: Opportunity }) {
           </div>
           <p className="text-xs text-muted-foreground">
             Pengiriman balasan aktif di Fase 5, hanya untuk post yang diizinkan Threads API dan setelah approval.
-            {!opp.post.permalink && " Post demo tidak memiliki tautan asli."}
+            {!opp.post.permalink && " Post ini tidak memiliki tautan asli."}
           </p>
         </CardContent>
       </Card>
@@ -115,7 +177,7 @@ function DraftEditor({ draft, opp }: { draft: ReplyDraft; opp: Opportunity }) {
 }
 
 export function ReplyCenterPage() {
-  const { data } = useWorkspace();
+  const { data, basePath } = useWorkspace();
   const drafts = useReplyDrafts();
   const opportunities = useOpportunities();
   const [params, setParams] = useSearchParams();
@@ -123,14 +185,28 @@ export function ReplyCenterPage() {
   return (
     <>
       <PageHeader title="Reply Center" description="Tinjau, sunting, dan setujui draft balasan AI. Tidak ada balasan yang dikirim tanpa persetujuan." />
-      {!data.intelligence.available ? (
+      {!data.intelligence.capabilities.drafts ? (
         <NotYetAvailable icon={MessageCircle} title="Belum ada draft balasan" description="Draft dibuat oleh AI di Fase 3 dan dapat dikirim setelah approval di Fase 5." />
       ) : (
         <QueryBoundary query={drafts}>
           {(list) => (
             <QueryBoundary query={opportunities}>
               {(opps) => {
-                if (list.length === 0) return <EmptyState icon={MessageCircle} title="Tidak ada draft" className="bg-white" />;
+                if (list.length === 0) {
+                  return (
+                    <EmptyState
+                      icon={MessageCircle}
+                      title="Belum ada draft balasan"
+                      description="Buka Opportunities lalu pilih “Buat draft balasan” pada peluang yang cocok dengan katalog."
+                      className="bg-white"
+                      action={
+                        <Link to={`${basePath}/opportunities`} className="text-sm font-semibold text-primary hover:underline">
+                          Buka Opportunities
+                        </Link>
+                      }
+                    />
+                  );
+                }
                 const selectedId = params.get("draft") ?? list[0]?.id;
                 const selected = list.find((d) => d.id === selectedId) ?? list[0];
                 const selectedOpp = opps.find((o) => o.id === selected?.opportunityId);
@@ -164,7 +240,7 @@ export function ReplyCenterPage() {
                       </ul>
                     </nav>
                     {selected && selectedOpp ? (
-                      <DraftEditor key={selected.id} draft={selected} opp={selectedOpp} />
+                      <DraftEditor key={`${selected.id}:${selected.updatedAt ?? ""}:${selected.text}`} draft={selected} opp={selectedOpp} />
                     ) : (
                       <EmptyState icon={MessageCircle} title="Pilih draft" className="bg-white" />
                     )}

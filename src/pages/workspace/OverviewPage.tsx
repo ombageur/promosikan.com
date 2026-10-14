@@ -17,6 +17,7 @@ function SetupChecklist() {
   const { workspace, basePath, can } = useWorkspace();
   const offerings = useOfferings();
   const keywords = useKeywords();
+  const opportunities = useOpportunities();
   const steps = [
     { done: true, label: "Buat workspace", to: null },
     {
@@ -34,6 +35,7 @@ function SetupChecklist() {
       label: "Tentukan keyword yang dipantau",
       to: can("catalog.manage") ? `${basePath}/discover?tab=keywords` : null,
     },
+    { done: (opportunities.data?.length ?? 0) > 0, label: "Analisis percakapan pertama", to: can("ai.use") ? `${basePath}/discover?tab=manual` : null },
     { done: false, label: "Hubungkan Threads (Fase 4)", to: null },
   ];
 
@@ -201,22 +203,42 @@ function Dashboard() {
 }
 
 export function OverviewPage() {
-  const { workspace, data, isPublicDemo } = useWorkspace();
+  const { workspace, data, isPublicDemo, basePath, can } = useWorkspace();
 
   return (
     <>
       <PageHeader title={`Selamat datang di ${workspace.name}`} description="Temukan yang butuh. Tawarkan yang tepat." />
-      {data.intelligence.available ? (
+      {data.intelligence.capabilities.stats ? (
         <Dashboard />
       ) : (
         <div className="grid gap-5 lg:grid-cols-[1.4fr_1fr]">
           <SetupChecklist />
           <div className="grid content-start gap-4">
-            <NotYetAvailable
-              icon={Sparkles}
-              title="Belum ada data peluang"
-              description="Dashboard terisi setelah Threads terhubung (Fase 4) dan analisis AI berjalan (Fase 3)."
-            />
+            {can("ai.use") && data.intelligence.capabilities.ai ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Sparkles className="size-5 text-primary" aria-hidden />
+                    Coba Analisis Manual
+                  </CardTitle>
+                  <CardDescription>
+                    Tempel post dari media sosial. AI menilai niat membeli dan mencocokkannya dengan katalog Anda. Dashboard lengkap
+                    terisi setelah monitoring Threads aktif (Fase 4).
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Link to={`${basePath}/discover?tab=manual`} className="text-sm font-semibold text-primary hover:underline">
+                    Buka Analisis Manual →
+                  </Link>
+                </CardContent>
+              </Card>
+            ) : (
+              <NotYetAvailable
+                icon={Sparkles}
+                title="Belum ada data peluang"
+                description="Dashboard terisi setelah monitoring Threads aktif (Fase 4)."
+              />
+            )}
             {!isPublicDemo && (
               <Card className="bg-secondary/60">
                 <CardContent className="flex flex-wrap items-center justify-between gap-3">

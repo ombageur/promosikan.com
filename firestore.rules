@@ -37,6 +37,7 @@ service cloud.firestore {
         'members.manage': ['owner', 'admin'],
         'audit.read': ['owner', 'admin'],
         'catalog.manage': ['owner', 'admin', 'marketing'],
+        'reply.edit': ['owner', 'admin', 'marketing', 'sales'],
         'automation.manage': ['owner', 'admin']
       }[permission]);
     }
@@ -168,6 +169,34 @@ service cloud.firestore {
         allow create: if can(wid, 'catalog.manage') && validKeyword(request.resource.data) && createdNow(request.resource.data);
         allow update: if can(wid, 'catalog.manage') && validKeyword(request.resource.data) && createdUnchanged();
         allow delete: if can(wid, 'catalog.manage');
+      }
+
+      // ---------- Hasil AI (SPEC §9–§12): ditulis backend; client hanya status & teks draft ----------
+      match /opportunities/{opportunityId} {
+        allow read: if can(wid, 'workspace.read');
+        allow update: if can(wid, 'reply.edit')
+          && changedOnly(['status', 'updatedAt', 'updatedBy'])
+          && request.resource.data.status in ['new', 'saved', 'skipped']
+          && stampedNow(request.resource.data);
+        allow create, delete: if false;
+      }
+
+      match /replyDrafts/{draftId} {
+        allow read: if can(wid, 'workspace.read');
+        // Kualitas, gaya, dan status publikasi (approved/sending/sent/...) hanya dari backend.
+        allow update: if can(wid, 'reply.edit')
+          && changedOnly(['text', 'status', 'updatedAt', 'updatedBy'])
+          && reqString(request.resource.data, 'text', 1, 300)
+          && resource.data.status in ['draft', 'pending_approval', 'skipped']
+          && request.resource.data.status in ['draft', 'pending_approval', 'skipped']
+          && stampedNow(request.resource.data);
+        allow create, delete: if false;
+      }
+
+      // Kuota & biaya AI: hanya backend yang menulis; Owner/Admin bisa melihat.
+      match /usage/{usageId} {
+        allow read: if can(wid, 'audit.read');
+        allow write: if false;
       }
 
       // ---------- Pengaturan (SPEC §19) — hanya dokumen `automation` ----------

@@ -1,6 +1,6 @@
-import { Search, Target } from "lucide-react";
+import { MessageCircle, Search, Sparkles, Target } from "lucide-react";
 import { useMemo, useState } from "react";
-import { Link } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { BAND_LABELS, type OpportunityBand } from "@shared/scoring";
 import { INTENT_LABELS, INTENTS, type Opportunity } from "@shared/types/intelligence";
 import { IntentBadge, RedFlagBadge, ScoreBadge } from "@/components/intelligence/badges";
@@ -8,10 +8,11 @@ import { PostQuote } from "@/components/intelligence/PostQuote";
 import { NotYetAvailable } from "@/components/intelligence/states";
 import { QueryBoundary } from "@/components/layout/QueryBoundary";
 import { EmptyState, PageHeader } from "@/components/layout/states";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useOpportunities } from "@/hooks/useData";
+import { useCapabilities, useGenerateReply, useOpportunities, useReplyDrafts, useSetOpportunityStatus } from "@/hooks/useData";
 import { useWorkspace } from "@/hooks/useWorkspace";
 
 const ALL = "all";
@@ -36,8 +37,54 @@ function FilterSelect({ items, value, onChange, label }: { items: { value: strin
   );
 }
 
-function OpportunityCard({ opp }: { opp: Opportunity }) {
-  const { basePath } = useWorkspace();
+const STATUS_LABEL = { new: "Baru", saved: "Disimpan", skipped: "Dilewati" } as const;
+
+function OpportunityActions({ opp, draftId }: { opp: Opportunity; draftId: string | undefined }) {
+  const { basePath, can } = useWorkspace();
+  const caps = useCapabilities();
+  const navigate = useNavigate();
+  const generate = useGenerateReply();
+  const setStatus = useSetOpportunityStatus();
+  const replyable = opp.matches.length > 0 && opp.redFlags.length === 0;
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {replyable && draftId && (
+        <Link to={`${basePath}/reply-center?draft=${draftId}`} className={buttonVariants({ variant: "outline", size: "sm" })}>
+          <MessageCircle aria-hidden />
+          Lihat draft balasan
+        </Link>
+      )}
+      {replyable && !draftId && caps.ai && can("ai.use") && (
+        <Button
+          size="sm"
+          disabled={generate.isPending}
+          onClick={() =>
+            generate.mutate({ opportunityId: opp.id }, { onSuccess: (r) => navigate(`${basePath}/reply-center?draft=${r.draftId}`) })
+          }
+        >
+          <Sparkles aria-hidden />
+          {generate.isPending ? "Menyusun draft…" : "Buat draft balasan"}
+        </Button>
+      )}
+      {can("reply.edit") &&
+        (["saved", "skipped"] as const).map((status) => (
+          <Button
+            key={status}
+            size="sm"
+            variant="ghost"
+            aria-pressed={opp.status === status}
+            disabled={setStatus.isPending}
+            onClick={() => setStatus.mutate({ id: opp.id, status: opp.status === status ? "new" : status })}
+          >
+            {opp.status === status ? `✓ ${STATUS_LABEL[status]}` : status === "saved" ? "Simpan" : "Lewati"}
+          </Button>
+        ))}
+    </div>
+  );
+}
+
+function OpportunityCard({ opp, draftId }: { opp: Opportunity; draftId: string | undefined }) {
   const top = opp.matches[0];
   return (
     <Card>
@@ -70,11 +117,7 @@ function OpportunityCard({ opp }: { opp: Opportunity }) {
             </dd>
           </div>
         </dl>
-        {top && opp.redFlags.length === 0 && (
-          <Link to={`${basePath}/reply-center?draft=draft-${opp.id}`} className="justify-self-start text-sm font-semibold text-primary hover:underline">
-            Lihat draft balasan →
-          </Link>
-        )}
+        <OpportunityActions opp={opp} draftId={draftId} />
       </CardContent>
     </Card>
   );
@@ -82,7 +125,11 @@ function OpportunityCard({ opp }: { opp: Opportunity }) {
 
 export function OpportunitiesPage() {
   const { data } = useWorkspace();
+  const { basePath } = useWorkspace();
+  const caps = useCapabilities();
   const opportunities = useOpportunities();
+  const drafts = useReplyDrafts();
+  const draftByOpp = new Map((drafts.data ?? []).map((d) => [d.opportunityId, d.id]));
   const [q, setQ] = useState("");
   const [band, setBand] = useState(ALL);
   const [intent, setIntent] = useState(ALL);
@@ -100,7 +147,7 @@ export function OpportunitiesPage() {
   return (
     <>
       <PageHeader title="Opportunities" description="Percakapan yang dianalisis AI: niat membeli, masalah pelanggan, dan skor peluang 0–100." />
-      {!data.intelligence.available ? (
+      {!data.intelligence.capabilities.opportunities ? (
         <NotYetAvailable
           icon={Target}
           title="Belum ada peluang"
@@ -118,6 +165,23 @@ export function OpportunitiesPage() {
           </div>
           <QueryBoundary query={opportunities}>
             {(opps) => {
+              if (opps.length === 0) {
+                return (
+                  <EmptyState
+                    icon={Target}
+                    title="Belum ada peluang"
+                    description="Peluang muncul dari Analisis Manual sekarang, dan dari monitoring Threads mulai Fase 4."
+                    className="bg-white"
+                    action={
+                      caps.ai ? (
+                        <Link to={`${basePath}/discover?tab=manual`} className="text-sm font-semibold text-primary hover:underline">
+                          Analisis post pertama
+                        </Link>
+                      ) : undefined
+                    }
+                  />
+                );
+              }
               const visible = filter(opps);
               if (visible.length === 0) {
                 return <EmptyState icon={Search} title="Tidak ada peluang yang cocok" description="Ubah kata pencarian atau filter." className="bg-white" />;
@@ -126,7 +190,7 @@ export function OpportunitiesPage() {
                 <ul className="grid gap-4">
                   {visible.map((o) => (
                     <li key={o.id}>
-                      <OpportunityCard opp={o} />
+                      <OpportunityCard opp={o} draftId={draftByOpp.get(o.id)} />
                     </li>
                   ))}
                 </ul>

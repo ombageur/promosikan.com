@@ -32,6 +32,14 @@ export function HomePage() {
           Lihat Demo
         </Link>
       </div>
+      <footer className="mt-16 flex gap-4 text-sm text-muted-foreground">
+        <Link to="/privacy" className="hover:text-foreground">
+          Kebijakan Privasi
+        </Link>
+        <Link to="/terms" className="hover:text-foreground">
+          Syarat Layanan
+        </Link>
+      </footer>
       {import.meta.env.DEV && (
         <p className="mt-12 text-xs text-muted-foreground">
           Firebase: {useEmulators ? "Emulator Suite" : firebaseConfig.projectId}

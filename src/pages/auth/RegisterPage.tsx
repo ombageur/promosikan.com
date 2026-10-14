@@ -82,7 +82,15 @@ export function RegisterPage() {
           {isSubmitting ? "Membuat akun…" : "Daftar"}
         </Button>
         <p className="text-center text-xs text-muted-foreground">
-          Dengan mendaftar, Anda menyetujui Syarat Layanan dan Kebijakan Privasi Promosikan.com.
+          Dengan mendaftar, Anda menyetujui{" "}
+          <Link to="/terms" className="underline">
+            Syarat Layanan
+          </Link>{" "}
+          dan{" "}
+          <Link to="/privacy" className="underline">
+            Kebijakan Privasi
+          </Link>{" "}
+          Promosikan.com.
         </p>
       </form>
     </AuthLayout>

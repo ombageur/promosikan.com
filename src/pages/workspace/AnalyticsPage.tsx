@@ -29,7 +29,7 @@ export function AnalyticsPage() {
   return (
     <>
       <PageHeader title="Analytics" description="Performa discovery, pencocokan, balasan, dan konversi." />
-      {!data.intelligence.available ? (
+      {!data.intelligence.capabilities.stats ? (
         <NotYetAvailable icon={BarChart3} title="Belum ada data analytics" description="Metrik dihitung dari agregasi harian di backend (Fase 6)." />
       ) : (
         <QueryBoundary query={stats}>

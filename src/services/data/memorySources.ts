@@ -72,8 +72,12 @@ export function memoryCatalog(): CatalogSource {
 export function demoIntelligence(now = Date.now()): IntelligenceSource {
   const data = buildDemoIntelligence(now);
   return {
-    available: true,
+    // Data demo tidak pernah memanggil AI sungguhan.
+    capabilities: { opportunities: true, drafts: true, leads: true, stats: true, ai: false },
     listOpportunities: async () => data.opportunities,
+    setOpportunityStatus: async (id, status) => {
+      data.opportunities = data.opportunities.map((o) => (o.id === id ? { ...o, status } : o));
+    },
     listReplyDrafts: async () => data.replyDrafts,
     updateReplyDraft: async (id, patch) => {
       data.replyDrafts = data.replyDrafts.map((d) => (d.id === id ? { ...d, ...patch } : d));
@@ -83,21 +87,5 @@ export function demoIntelligence(now = Date.now()): IntelligenceSource {
       data.leads = data.leads.map((l) => (l.id === id ? { ...l, ...patch } : l));
     },
     listDailyStats: async () => data.dailyStats,
-  };
-}
-
-/** Workspace nyata sebelum pipeline discovery/AI tersedia: tidak ada data, tidak ada data palsu. */
-export function emptyIntelligence(): IntelligenceSource {
-  const unavailable = async () => {
-    throw new Error("Fitur ini belum tersedia untuk workspace ini.");
-  };
-  return {
-    available: false,
-    listOpportunities: async () => [],
-    listReplyDrafts: async () => [],
-    updateReplyDraft: unavailable,
-    listLeads: async () => [],
-    updateLead: unavailable,
-    listDailyStats: async () => [],
   };
 }
