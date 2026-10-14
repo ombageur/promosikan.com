@@ -591,7 +591,7 @@ Perlu diputuskan pemilik produk sebelum fase terkait dimulai:
 |---|---|---|
 | 1 | Payment gateway (misalnya Midtrans atau Xendit) dan model harga (bulanan/tahunan, mata uang IDR) | 7 |
 | 2 | Daftar plan beserta kuotanya (keyword aktif, analisis AI/bulan, balasan/hari, jumlah anggota) | 7 |
-| 3 | Layanan email transaksional untuk undangan dan notifikasi | 1 |
+| 3 | Layanan email transaksional untuk undangan dan notifikasi — **sementara:** koleksi `mail` (format Trigger Email) + link undangan manual; penyedia SMTP belum dipilih | 1 |
 | 4 | Domain produksi dan email pengirim | 1 |
 | 5 | Region Firebase/Functions final (`asia-southeast2` vs `asia-southeast1`) | 0 |
 | 6 | Platform sosial berikutnya setelah Threads | setelah 8 |

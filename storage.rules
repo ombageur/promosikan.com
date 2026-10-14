@@ -1,10 +1,32 @@
 rules_version = '2';
 
-// Fase 0: tolak semua akses client. Aturan logo workspace ditambahkan di Fase 1 (SPEC §15).
+// Storage Rules Promosikan.com (SPEC §15).
 service firebase.storage {
   match /b/{bucket}/o {
-    match /{allPaths=**} {
-      allow read, write: if false;
+
+    function memberDoc(wid) {
+      return /databases/(default)/documents/workspaces/$(wid)/members/$(request.auth.uid);
     }
+
+    function isMember(wid) {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && firestore.exists(memberDoc(wid));
+    }
+
+    function canManageWorkspace(wid) {
+      return isMember(wid) && firestore.get(memberDoc(wid)).data.role in ['owner', 'admin'];
+    }
+
+    // Logo workspace: gambar ≤ 2 MB, hanya Owner/Admin yang boleh menulis.
+    match /workspaces/{wid}/logo/{fileName} {
+      allow read: if isMember(wid);
+      allow create, update: if canManageWorkspace(wid)
+        && request.resource.size < 2 * 1024 * 1024
+        && request.resource.contentType.matches('image/(png|jpeg|webp)');
+      allow delete: if canManageWorkspace(wid);
+    }
+
+    // Semua path lain: ditolak (default).
   }
 }

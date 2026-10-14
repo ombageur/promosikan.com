@@ -24,4 +24,4 @@ Bekerjalah sebagai senior React engineer, Firebase architect, AI engineer, dan S
 16. Operasi kritis (rules, publikasi, kuota, scoring, idempotency) wajib punya tes otomatis.
 
 ## Sebelum menyatakan selesai
-Jalankan `npm run lint`, `npm run typecheck`, `npm test`, `npm run test:rules`, dan `npm run build`, lalu laporkan hasilnya apa adanya. Kerjakan hanya fase yang diminta. Fase disebut selesai hanya jika semua poin DoD di ROADMAP.md terpenuhi.
+Jalankan `npm run lint`, `npm run typecheck`, `npm test`, `npm run test:emulator`, dan `npm run build`, lalu laporkan hasilnya apa adanya. Kerjakan hanya fase yang diminta. Fase disebut selesai hanya jika semua poin DoD di ROADMAP.md terpenuhi.

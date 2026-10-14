@@ -10,15 +10,20 @@ Platform AI multi-tenant untuk customer discovery dan smart promotion: menemukan
 
 ## Status
 
-**Fase 0 — Migrasi & Fondasi: selesai.** Belum ada fitur produk nyata (login, workspace, AI, Threads). Yang tersedia:
+| Fase | Status |
+|---|---|
+| 0 — Migrasi & Fondasi | ✅ selesai |
+| 1 — Auth, Workspace & RBAC | ✅ selesai |
+| 2 — App Shell, Katalog & Demo Mode | berikutnya |
 
-- Vite + React 19 + TypeScript strict, Tailwind v4, React Router, TanStack Query, Zod.
-- Beranda dan **demo publik `/demo`** (Publish Agency). Semua data di demo adalah **data simulasi** dari fixtures, disimpan di `localStorage` browser, dan tidak pernah mengirim apa pun ke platform sosial.
-- `shared/scoring.ts`: perhitungan opportunity score (SPEC §9) beserta tes.
-- Cloud Functions Gen 2 (`functions/`) dengan endpoint `health`.
-- Firestore & Storage rules yang **menolak semua akses client** (aturan per koleksi mulai Fase 1) beserta tes di emulator.
+Yang sudah berfungsi:
 
-Fase berikutnya: **Fase 1 — Auth, Workspace & RBAC**.
+- **Akun:** daftar/masuk dengan email atau Google, verifikasi email (wajib sebelum memakai workspace), lupa kata sandi, keluar.
+- **Workspace multi-tenant:** buat workspace, workspace switcher, profil bisnis & logo, data terisolasi per workspace.
+- **Tim & role** (Owner, Admin, Marketing, Sales, Viewer — matriks di `shared/permissions.ts`): undang lewat link (berlaku 7 hari, sekali pakai), ubah role, keluarkan anggota, keluar, transfer ownership. Semua perubahan tercatat di audit log.
+- **Keamanan:** Firestore & Storage rules per role, Cloud Functions yang memverifikasi login, email terverifikasi, keanggotaan, dan izin.
+- **Demo publik `/demo`** (Publish Agency) — **data simulasi**, tidak pernah mengirim apa pun ke platform sosial.
+- Menu Discover, Opportunities, Reply Center, dll. tampil di sidebar sebagai "Segera" sampai fasenya dikerjakan.
 
 ## Prasyarat
 
@@ -35,7 +40,7 @@ npm run emulators            # Auth, Firestore, Functions, Storage, Hosting + UI
 npm run dev                  # di terminal lain → http://localhost:5173
 ```
 
-Dengan `VITE_USE_EMULATORS=true`, aplikasi memakai project emulator `demo-promosikan` dan tidak menyentuh project cloud. Untuk menyambung ke project nyata `promosikan-com`, isi variabel `VITE_FIREBASE_*` dari Firebase Console dan set `VITE_USE_EMULATORS=false`.
+Dengan `VITE_USE_EMULATORS=true`, aplikasi memakai project emulator `demo-promosikan` dan tidak menyentuh project cloud. Link verifikasi email dan reset kata sandi di emulator tidak dikirim ke inbox — buka di log terminal emulator atau di Emulator UI (tab Authentication). Login Google di emulator memakai akun tiruan. Untuk menyambung ke project nyata `promosikan-com`, isi variabel `VITE_FIREBASE_*` dari Firebase Console dan set `VITE_USE_EMULATORS=false`.
 
 ## Verifikasi
 
@@ -43,11 +48,11 @@ Dengan `VITE_USE_EMULATORS=true`, aplikasi memakai project emulator `demo-promos
 npm run lint
 npm run typecheck     # app + functions
 npm test              # unit test (vitest)
-npm run test:rules    # tes Security Rules di emulator
+npm run test:emulator # Security Rules + integrasi Functions + alur e2e (butuh Java)
 npm run build         # output: dist/
 ```
 
-> **Windows:** setelah `npm run test:rules`, proses Java emulator Firestore kadang tetap hidup sehingga run berikutnya gagal dengan "port taken". Hentikan dengan:
+> **Windows:** setelah `npm run test:emulator`, proses Java emulator Firestore kadang tetap hidup sehingga run berikutnya gagal dengan "port taken". Hentikan dengan:
 > `Get-NetTCPConnection -LocalPort 8080 -State Listen | % { Stop-Process -Id $_.OwningProcess -Force }`
 
 ## Struktur
@@ -65,6 +70,15 @@ docs/       SPEC, ROADMAP
 - Semua variabel `VITE_*` masuk ke bundle browser dan bersifat **publik**. Konfigurasi web Firebase memang publik; keamanan ditegakkan oleh Security Rules dan App Check.
 - Secret (OpenAI, Threads, kunci enkripsi) **hanya** di Secret Manager: `npx firebase functions:secrets:set NAMA_SECRET`.
 - Firebase Analytics sengaja belum diaktifkan sampai ada kebijakan persetujuan sesuai UU PDP.
+- Konfigurasi Functions non-secret ada di `functions/.env.<project-id>` (contoh: [functions/.env.example](functions/.env.example)): `APP_URL` untuk link undangan, `ENFORCE_APP_CHECK`.
+
+## Sebelum deploy pertama ke `promosikan-com`
+
+1. Firebase Console → Authentication: aktifkan provider **Email/Password** dan **Google**; tambahkan domain produksi di *Authorized domains*.
+2. Buat database **Firestore** dan bucket **Storage** (region sesuai keputusan #5 di SPEC §26).
+3. Upgrade ke paket **Blaze** (wajib untuk Cloud Functions).
+4. Buat `functions/.env.promosikan-com` dari `functions/.env.example`.
+5. Opsional: pasang Firebase Extension **Trigger Email** (koleksi `mail`) agar undangan terkirim lewat email.
 
 ## Deploy
 

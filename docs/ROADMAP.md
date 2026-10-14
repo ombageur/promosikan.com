@@ -32,7 +32,7 @@ Spesifikasi lengkap ada di [SPEC.md](SPEC.md). Setiap fase punya tujuan, cakupan
 - Struktur folder sesuai SPEC §23, termasuk `shared/` dan `functions/` (Gen 2, TS, ESLint).
 - Atur `firebase.json` (hosting dengan SPA rewrite, functions, firestore, storage, emulators), `.firebaserc` (dev/staging/prod), serta `firestore.rules` dan `storage.rules` awal yang menolak semua akses.
 - `src/lib/firebase/`: inisialisasi, koneksi otomatis ke emulator di mode dev, dan App Check (debug token di dev).
-- Pindah ke npm. Script: `dev`, `build`, `lint`, `typecheck`, `test`, `test:rules`, `emulators`.
+- Pindah ke npm. Script: `dev`, `build`, `lint`, `typecheck`, `test`, `test:rules` (kini `test:emulator`), `emulators`.
 - Perbarui CI GitHub Actions: Node 22, npm ci, lint, typecheck, test, tes rules di emulator, dan build.
 - Perbarui `.env.example` dan README.
 
@@ -61,11 +61,17 @@ Spesifikasi lengkap ada di [SPEC.md](SPEC.md). Setiap fase punya tujuan, cakupan
 - Tes rules: setiap role × aksi, akses lintas workspace, dan penulisan field terlindungi (`role`, `ownerId`, `plan`).
 - Audit log untuk perubahan anggota dan role.
 
-**DoD:**
-- [ ] User A tidak bisa membaca maupun menulis apa pun di workspace User B (dibuktikan dengan tes).
-- [ ] Viewer tidak bisa menulis. Admin tidak bisa mengubah Owner.
-- [ ] Undangan kedaluwarsa dalam 7 hari dan hanya bisa dipakai sekali.
-- [ ] Semua function menolak pemanggil yang tidak terautentikasi, emailnya belum terverifikasi, atau bukan anggota.
+**DoD:** ✅ selesai 2026-10-15 (branch `phase-1-auth-workspace`)
+- [x] User A tidak bisa membaca maupun menulis apa pun di workspace User B (dibuktikan dengan tes). — `tests/rules/firestore.test.ts`, `tests/rules/storage.test.ts`, `tests/e2e/workspace-flow.test.ts`
+- [x] Viewer tidak bisa menulis. Admin tidak bisa mengubah Owner. — tes matriks role di `tests/rules/`, `shared/permissions.test.ts`, `functions/src/workspace/workspace.test.ts`
+- [x] Undangan kedaluwarsa dalam 7 hari dan hanya bisa dipakai sekali. — `workspace.test.ts` ("undangan anggota")
+- [x] Semua function menolak pemanggil yang tidak terautentikasi, emailnya belum terverifikasi, atau bukan anggota. — `requireAuth` + tes orang luar di `workspace.test.ts`, alur e2e
+
+**Catatan Fase 1:**
+- Email undangan ditulis ke koleksi `mail` (format Firebase Extension "Trigger Email"). Sampai extension dipasang, admin membagikan link undangan yang tampil di dialog.
+- App Check untuk callable dikendalikan `ENFORCE_APP_CHECK` (default `false`) sampai site key reCAPTCHA Enterprise tersedia.
+- Platform Super Admin (custom claim) belum diimplementasikan; dijadwalkan di Fase 8.
+- Hapus workspace dijadwalkan di Fase 7.
 
 ---
 
@@ -216,7 +222,7 @@ Baca AGENTS.md, docs/SPEC.md, dan docs/ROADMAP.md.
 Kerjakan HANYA Fase <N> — <Nama> sesuai ROADMAP.md.
 Sebelum menulis kode, tampilkan rencana singkat: berkas yang akan dibuat/diubah dan urutannya.
 Setelah selesai:
-1. Jalankan npm run lint, npm run typecheck, npm test, npm run test:rules, npm run build.
+1. Jalankan npm run lint, npm run typecheck, npm test, npm run test:emulator, npm run build.
 2. Perbaiki semua error.
 3. Centang setiap poin DoD Fase <N> beserta buktinya (nama tes/perintah). Poin yang belum terpenuhi tulis apa adanya.
 4. Perbarui README (status fase) dan tulis langkah berikutnya.

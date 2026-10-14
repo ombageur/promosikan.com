@@ -21,12 +21,18 @@ export function HomePage() {
         menyiapkan pendekatan promosi yang relevan.
       </p>
       <div className="mt-8 flex flex-wrap justify-center gap-3">
-        <Link to="/demo" className="btn btn-primary">
-          Lihat Demo <ArrowRight size={16} aria-hidden />
+        <Link to="/register" className="btn btn-primary">
+          Mulai gratis <ArrowRight size={16} aria-hidden />
+        </Link>
+        <Link to="/login" className="btn btn-outline">
+          Masuk
+        </Link>
+        <Link to="/demo" className="btn btn-soft">
+          Lihat Demo
         </Link>
       </div>
       <p className="mt-12 text-xs text-slate-400">
-        Fase 0 · Firebase: {useEmulators ? "Emulator Suite" : firebaseConfig.projectId}
+        Firebase: {useEmulators ? "Emulator Suite" : firebaseConfig.projectId}
       </p>
     </main>
   );

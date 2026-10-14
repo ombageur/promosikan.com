@@ -1,11 +1,141 @@
 rules_version = '2';
 
-// Fase 0: tolak semua akses client. Aturan per koleksi ditambahkan mulai Fase 1 (SPEC §15).
+// Security Rules Promosikan.com (SPEC §15).
+// Matriks role dicerminkan dari shared/permissions.ts — ubah keduanya bersamaan;
+// tests/rules memverifikasi keselarasannya.
 // Admin SDK (Cloud Functions) tidak terikat rules ini.
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
+
+    // ---------- Identitas ----------
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function verified() {
+      return signedIn() && request.auth.token.email_verified == true;
+    }
+
+    // ---------- Keanggotaan & role ----------
+    function memberPath(wid) {
+      return /databases/$(database)/documents/workspaces/$(wid)/members/$(request.auth.uid);
+    }
+
+    function isMember(wid) {
+      return verified() && exists(memberPath(wid));
+    }
+
+    function roleIn(wid, roles) {
+      return isMember(wid) && get(memberPath(wid)).data.role in roles;
+    }
+
+    // Cermin dari PERMISSIONS di shared/permissions.ts (hanya yang dipakai rules).
+    function can(wid, permission) {
+      return roleIn(wid, {
+        'workspace.read': ['owner', 'admin', 'marketing', 'sales', 'viewer'],
+        'workspace.update': ['owner', 'admin'],
+        'members.manage': ['owner', 'admin'],
+        'audit.read': ['owner', 'admin']
+      }[permission]);
+    }
+
+    // ---------- Validasi ----------
+    function optString(data, field, max) {
+      return !(field in data) || (data[field] is string && data[field].size() <= max);
+    }
+
+    function reqString(data, field, min, max) {
+      return field in data && data[field] is string && data[field].size() >= min && data[field].size() <= max;
+    }
+
+    function optStringOrNull(data, field, max) {
+      return !(field in data) || data[field] == null || (data[field] is string && data[field].size() <= max);
+    }
+
+    function changedOnly(fields) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields);
+    }
+
+    // ---------- users/{uid} ----------
+    function validUser(data) {
+      return optString(data, 'displayName', 100)
+        && optStringOrNull(data, 'photoURL', 2048)
+        && optStringOrNull(data, 'lastWorkspaceId', 128)
+        && (!('email' in data) || data.email == request.auth.token.email);
+    }
+
+    match /users/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['displayName', 'email', 'photoURL', 'lastWorkspaceId', 'createdAt', 'updatedAt'])
+        && request.resource.data.createdAt == request.time
+        && validUser(request.resource.data);
+      allow update: if signedIn() && request.auth.uid == uid
+        && changedOnly(['displayName', 'email', 'photoURL', 'lastWorkspaceId', 'updatedAt'])
+        && request.resource.data.updatedAt == request.time
+        && validUser(request.resource.data);
+      allow delete: if false;
+    }
+
+    // ---------- workspaces/{wid} ----------
+    function validWorkspaceProfile(data) {
+      return reqString(data, 'name', 2, 100)
+        && reqString(data, 'businessName', 2, 100)
+        && optString(data, 'industry', 100)
+        && optString(data, 'website', 2048)
+        && optString(data, 'description', 1000)
+        && optString(data, 'location', 150)
+        && optString(data, 'contactEmail', 254)
+        && optString(data, 'contactPhone', 30)
+        && optString(data, 'brandVoice', 200)
+        && (!('preferredLanguage' in data) || data.preferredLanguage in ['id', 'en'])
+        && optStringOrNull(data, 'logoUrl', 2048)
+        && (!('logoPath' in data) || data.logoPath == null
+            || (data.logoPath is string && data.logoPath.matches('workspaces/' + resource.id + '/logo/[^/]+')));
+    }
+
+    match /workspaces/{wid} {
+      allow read: if can(wid, 'workspace.read');
+      // Pembuatan lewat createWorkspace (Cloud Function). ownerId, plan, isDemo, createdAt tidak bisa diubah client.
+      allow create, delete: if false;
+      allow update: if can(wid, 'workspace.update')
+        && changedOnly(['name', 'businessName', 'industry', 'website', 'description', 'location',
+                        'contactEmail', 'contactPhone', 'brandVoice', 'preferredLanguage',
+                        'logoPath', 'logoUrl', 'updatedAt'])
+        && request.resource.data.updatedAt == request.time
+        && validWorkspaceProfile(request.resource.data);
+
+      // Keanggotaan & role hanya diubah lewat Cloud Functions.
+      match /members/{memberUid} {
+        allow read: if can(wid, 'workspace.read');
+        allow write: if false;
+      }
+
+      match /auditLogs/{logId} {
+        allow read: if can(wid, 'audit.read');
+        allow write: if false;
+      }
+    }
+
+    // Collection group: daftar workspace milik pengguna (workspace switcher).
+    match /{path=**}/members/{memberUid} {
+      allow read: if verified() && resource.data.uid == request.auth.uid;
+    }
+
+    // ---------- invitations/{inviteId} ----------
+    match /invitations/{inviteId} {
+      allow read: if verified() && (
+        resource.data.email == request.auth.token.email.lower()
+        || can(resource.data.workspaceId, 'members.manage')
+      );
+      allow write: if false;
+    }
+
+    // Antrean email (Firebase Extension "Trigger Email") — backend-only.
+    match /mail/{mailId} {
       allow read, write: if false;
     }
+
+    // Semua path lain: ditolak (default).
   }
 }
