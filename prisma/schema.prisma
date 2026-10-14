@@ -1,0 +1,477 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum WorkspaceRole {
+  OWNER
+  ADMIN
+  MARKETING
+  SALES
+  VIEWER
+}
+enum LeadStage {
+  DISCOVERED
+  QUALIFIED
+  MATCHED
+  REPLY_DRAFTED
+  REPLIED
+  ENGAGED
+  CONTACTED
+  NEGOTIATION
+  CONVERTED
+  LOST
+}
+enum ReplyStatus {
+  DRAFT
+  PENDING
+  SENDING
+  SENT
+  FAILED
+  UNSUPPORTED
+  SKIPPED
+}
+enum Platform {
+  THREADS
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique
+  name         String
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  memberships  WorkspaceMember[]
+  sessions     Session[]
+}
+
+model Session {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId, expiresAt])
+}
+
+model Workspace {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String
+  slug        String   @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  members     WorkspaceMember[]
+  profile     BusinessProfile?
+  services    Service[]
+  products    Product[]
+  keywords    Keyword[]
+  posts       SocialPost[]
+  leads       Lead[]
+  drafts      ReplyDraft[]
+  settings    AutomationSetting?
+}
+
+model WorkspaceMember {
+  id          String        @id @default(uuid()) @db.Uuid
+  workspaceId String        @db.Uuid
+  userId      String        @db.Uuid
+  role        WorkspaceRole @default(VIEWER)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([workspaceId, userId])
+  @@index([userId])
+}
+
+model BusinessProfile {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @unique @db.Uuid
+  name        String
+  logoUrl     String?
+  website     String?
+  description String   @default("")
+  industry    String?
+  location    String?
+  targetMarket String?
+  strengths   String?
+  contact     String?
+  language    String   @default("id")
+  brandVoice  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+model Product {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @db.Uuid
+  name        String
+  category    String?
+  description String
+  benefits    String?
+  targetCustomer String?
+  problemSolved String?
+  priceRange  String?
+  usp         String?
+  landingUrl  String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  keywords    ProductKeyword[]
+  @@index([workspaceId, active])
+}
+
+model Service {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @db.Uuid
+  name        String
+  category    String?
+  description String
+  benefits    String?
+  targetCustomer String?
+  problemSolved String?
+  priceRange  String?
+  usp         String?
+  landingUrl  String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  keywords    ProductKeyword[]
+  matches     ProductMatch[]
+  @@index([workspaceId, active])
+}
+
+model ProductKeyword {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @db.Uuid
+  productId   String?  @db.Uuid
+  serviceId   String?  @db.Uuid
+  phrase      String
+  createdAt   DateTime @default(now())
+  product     Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
+  service     Service? @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  @@index([workspaceId, phrase])
+}
+
+model TargetCustomerProfile {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @db.Uuid
+  name        String
+  description String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  @@index([workspaceId])
+}
+
+model SocialAccount {
+  id             String   @id @default(uuid()) @db.Uuid
+  workspaceId    String   @db.Uuid
+  platform       Platform
+  platformUserId String
+  username       String?
+  encryptedToken String
+  tokenExpiresAt DateTime?
+  capabilities   Json?
+  connectedAt    DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  @@unique([workspaceId, platform, platformUserId])
+  @@index([workspaceId])
+}
+
+model KeywordGroup {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @db.Uuid
+  name        String
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  keywords    Keyword[]
+  @@unique([workspaceId, name])
+}
+
+model Keyword {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @db.Uuid
+  groupId     String?  @db.Uuid
+  phrase      String
+  priority    Int      @default(50)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  group       KeywordGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  @@unique([workspaceId, phrase])
+  @@index([workspaceId, active, priority])
+}
+
+model MonitoringJob {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @db.Uuid
+  platform    Platform
+  status      String
+  cursor      String?
+  error       String?
+  startedAt   DateTime @default(now())
+  finishedAt  DateTime?
+  @@index([workspaceId, startedAt])
+}
+
+model PostAuthor {
+  id             String   @id @default(uuid()) @db.Uuid
+  platform       Platform
+  platformUserId String
+  username       String?
+  displayName    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  posts          SocialPost[]
+  @@unique([platform, platformUserId])
+}
+
+model SocialPost {
+  id             String   @id @default(uuid()) @db.Uuid
+  workspaceId    String   @db.Uuid
+  platform       Platform
+  platformPostId String
+  authorId       String?  @db.Uuid
+  text           String
+  permalink      String?
+  postedAt       DateTime?
+  discoveredAt   DateTime @default(now())
+  expiresAt      DateTime?
+  isDemo         Boolean  @default(false)
+  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  author         PostAuthor? @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  analysis       LeadAnalysis?
+  lead           Lead?
+  drafts         ReplyDraft[]
+  @@unique([workspaceId, platform, platformPostId])
+  @@index([workspaceId, discoveredAt])
+  @@index([expiresAt])
+}
+
+model LeadAnalysis {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @db.Uuid
+  postId      String   @unique @db.Uuid
+  category    String?
+  problem     String?
+  buyingIntent String
+  urgency     String?
+  relevance   String?
+  suitability String?
+  action      String?
+  model       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  post        SocialPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  score       OpportunityScore?
+  matches     ProductMatch[]
+  @@index([workspaceId])
+}
+
+model OpportunityScore {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @db.Uuid
+  analysisId  String   @unique @db.Uuid
+  score       Int
+  reason      String
+  breakdown   Json
+  createdAt   DateTime @default(now())
+  analysis    LeadAnalysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  @@index([workspaceId, score])
+}
+
+model ProductMatch {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @db.Uuid
+  analysisId  String   @db.Uuid
+  serviceId   String   @db.Uuid
+  score       Int
+  reason      String
+  createdAt   DateTime @default(now())
+  analysis    LeadAnalysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  service     Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  @@unique([analysisId, serviceId])
+  @@index([workspaceId, score])
+}
+
+model AIProcessingLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @db.Uuid
+  postId      String?  @db.Uuid
+  stage       String
+  status      String
+  error       String?
+  tokenUsage  Int?
+  createdAt   DateTime @default(now())
+  @@index([workspaceId, createdAt])
+}
+
+model ReplyDraft {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @db.Uuid
+  postId      String   @db.Uuid
+  body        String
+  style       String
+  status      ReplyStatus @default(DRAFT)
+  createdById String?  @db.Uuid
+  approvedById String? @db.Uuid
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  post        SocialPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  approvals   ReplyApproval[]
+  attempts    ReplyAttempt[]
+  @@index([workspaceId, status])
+}
+
+model ReplyApproval {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @db.Uuid
+  draftId     String   @db.Uuid
+  userId      String   @db.Uuid
+  decision    String
+  note        String?
+  createdAt   DateTime @default(now())
+  draft       ReplyDraft @relation(fields: [draftId], references: [id], onDelete: Cascade)
+  @@index([workspaceId, draftId])
+}
+
+model ReplyAttempt {
+  id             String   @id @default(uuid()) @db.Uuid
+  workspaceId    String   @db.Uuid
+  draftId        String   @db.Uuid
+  idempotencyKey String   @unique
+  status         ReplyStatus @default(PENDING)
+  platformReplyId String?
+  error          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  draft          ReplyDraft @relation(fields: [draftId], references: [id], onDelete: Cascade)
+  @@index([workspaceId, status])
+}
+
+model PromotionActivity {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @db.Uuid
+  leadId      String?  @db.Uuid
+  type        String
+  details     Json?
+  createdAt   DateTime @default(now())
+  @@index([workspaceId, createdAt])
+}
+
+model Lead {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @db.Uuid
+  postId      String   @unique @db.Uuid
+  stage       LeadStage @default(DISCOVERED)
+  need        String?
+  assignedToId String? @db.Uuid
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  post        SocialPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  activities  LeadActivity[]
+  @@index([workspaceId, stage])
+}
+
+model LeadActivity {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @db.Uuid
+  leadId      String   @db.Uuid
+  userId      String?  @db.Uuid
+  type        String
+  note        String?
+  createdAt   DateTime @default(now())
+  lead        Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  @@index([workspaceId, leadId, createdAt])
+}
+
+model LeadAssignment {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @db.Uuid
+  leadId      String   @db.Uuid
+  userId      String   @db.Uuid
+  assignedAt  DateTime @default(now())
+  @@index([workspaceId, leadId])
+}
+
+model ConversionEvent {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @db.Uuid
+  leadId      String   @db.Uuid
+  event       String
+  value       Decimal? @db.Decimal(12, 2)
+  isManual    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  @@index([workspaceId, createdAt])
+}
+
+model SubscriptionPlan {
+  id          String   @id @default(uuid()) @db.Uuid
+  code        String   @unique
+  name        String
+  limits      Json
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model WorkspaceSubscription {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @db.Uuid
+  planId      String   @db.Uuid
+  status      String
+  startsAt    DateTime @default(now())
+  endsAt      DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  @@index([workspaceId, status])
+}
+
+model UsageRecord {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @db.Uuid
+  metric      String
+  quantity    Int      @default(1)
+  recordedAt  DateTime @default(now())
+  @@index([workspaceId, metric, recordedAt])
+}
+
+model AutomationSetting {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @unique @db.Uuid
+  monitoringEnabled Boolean @default(false)
+  minOpportunityScore Int @default(60)
+  minMatchScore Int @default(60)
+  replyStyle  String   @default("Consultative")
+  manualApproval Boolean @default(true)
+  autoReplyEnabled Boolean @default(false)
+  emergencyStop Boolean @default(true)
+  dailyReplyLimit Int @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String?  @db.Uuid
+  actorId     String?  @db.Uuid
+  action      String
+  subjectId   String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  @@index([workspaceId, createdAt])
+}
