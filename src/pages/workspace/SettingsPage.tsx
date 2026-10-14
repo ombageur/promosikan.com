@@ -102,8 +102,9 @@ function LogoCard({ editable }: { editable: boolean }) {
 }
 
 export function SettingsPage() {
-  const { workspace, can } = useWorkspace();
-  const editable = can("workspace.update");
+  const { workspace, can, isPublicDemo } = useWorkspace();
+  // Demo publik tidak menyimpan profil (tidak ada akses Firestore).
+  const editable = can("workspace.update") && !isPublicDemo;
   const form = useForm<WorkspaceProfileInput, unknown, WorkspaceProfile>({
     resolver: zodResolver(workspaceProfileSchema),
     values: profileOf(workspace),
@@ -134,9 +135,13 @@ export function SettingsPage() {
         description="Profil bisnis ini dipakai AI untuk mencocokkan percakapan dan menyusun balasan sesuai brand Anda."
       />
       {!editable && (
-        <Alert className="mb-5">
+        <Alert className="mb-5" role="note">
           <Lock aria-hidden />
-          <AlertDescription>Hanya Owner dan Admin yang dapat mengubah pengaturan workspace.</AlertDescription>
+          <AlertDescription>
+            {isPublicDemo
+              ? "Profil demo hanya bisa dilihat. Daftar gratis untuk membuat workspace sendiri."
+              : "Hanya Owner dan Admin yang dapat mengubah pengaturan workspace."}
+          </AlertDescription>
         </Alert>
       )}
       <div className="grid gap-5">

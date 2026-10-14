@@ -2,6 +2,9 @@ import { onSnapshot } from "firebase/firestore";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { can as roleCan, isRole, type Role } from "@shared/permissions";
 import { useCurrentUser } from "@/hooks/useAuth";
+import { firestoreCatalog } from "@/services/data/firestoreCatalog";
+import { demoIntelligence, emptyIntelligence } from "@/services/data/memorySources";
+import type { DataSource } from "@/services/data/types";
 import { setLastWorkspace } from "@/services/users";
 import { memberDoc, toWorkspace, workspaceDoc } from "@/services/workspaces";
 import type { Workspace } from "@/types/workspace";
@@ -64,11 +67,29 @@ export function WorkspaceProvider({ workspaceId, children, fallback }: Props) {
     if (ready) setLastWorkspace(user.uid, workspaceId).catch(() => undefined);
   }, [ready, user.uid, workspaceId]);
 
+  // Katalog selalu dari Firestore. Data peluang/lead: demo untuk workspace demo, kosong untuk workspace nyata.
+  const isDemo = snapshot.workspace?.isDemo ?? false;
+  const data = useMemo<DataSource>(
+    () => ({
+      key: `ws:${workspaceId}:${isDemo ? "demo" : "live"}`,
+      catalog: firestoreCatalog(workspaceId),
+      intelligence: isDemo ? demoIntelligence() : emptyIntelligence(),
+    }),
+    [workspaceId, isDemo],
+  );
+
   const value = useMemo<WorkspaceState | null>(() => {
     if (!ready || !snapshot.workspace || !snapshot.role) return null;
     const role = snapshot.role;
-    return { workspace: snapshot.workspace, role, can: (permission) => roleCan(role, permission) };
-  }, [ready, snapshot.workspace, snapshot.role]);
+    return {
+      workspace: snapshot.workspace,
+      role,
+      can: (permission) => roleCan(role, permission),
+      basePath: `/w/${workspaceId}`,
+      isPublicDemo: false,
+      data,
+    };
+  }, [ready, snapshot.workspace, snapshot.role, workspaceId, data]);
 
   if (!value) {
     const status = snapshot.key === key && snapshot.status !== "ready" ? snapshot.status : "loading";

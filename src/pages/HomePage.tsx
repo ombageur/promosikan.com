@@ -1,5 +1,6 @@
 import { ArrowRight, Sparkles } from "lucide-react";
 import { Link } from "react-router";
+import { buttonVariants } from "@/components/ui/button";
 import { firebaseConfig, useEmulators } from "@/lib/firebase/config";
 
 export function HomePage() {
@@ -21,19 +22,21 @@ export function HomePage() {
         menyiapkan pendekatan promosi yang relevan.
       </p>
       <div className="mt-8 flex flex-wrap justify-center gap-3">
-        <Link to="/register" className="btn btn-primary">
+        <Link to="/register" className={buttonVariants({ size: "lg" })}>
           Mulai gratis <ArrowRight size={16} aria-hidden />
         </Link>
-        <Link to="/login" className="btn btn-outline">
+        <Link to="/login" className={buttonVariants({ size: "lg", variant: "outline" })}>
           Masuk
         </Link>
-        <Link to="/demo" className="btn btn-soft">
+        <Link to="/demo" className={buttonVariants({ size: "lg", variant: "secondary" })}>
           Lihat Demo
         </Link>
       </div>
-      <p className="mt-12 text-xs text-slate-400">
-        Firebase: {useEmulators ? "Emulator Suite" : firebaseConfig.projectId}
-      </p>
+      {import.meta.env.DEV && (
+        <p className="mt-12 text-xs text-muted-foreground">
+          Firebase: {useEmulators ? "Emulator Suite" : firebaseConfig.projectId}
+        </p>
+      )}
     </main>
   );
 }

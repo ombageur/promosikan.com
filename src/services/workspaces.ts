@@ -102,6 +102,7 @@ export async function getInvitation(inviteId: string): Promise<Invitation | null
 type Ok = { ok: true };
 
 export const createWorkspace = callable<CreateWorkspaceInput, { workspaceId: string }>("createWorkspace");
+export const createDemoWorkspace = callable<void, { workspaceId: string; existing: boolean }>("createDemoWorkspace");
 export const inviteMember = callable<InviteMemberInput, { inviteId: string; inviteUrl: string; expiresInDays: number }>(
   "inviteMember",
 );

@@ -5,6 +5,8 @@ import type { Role } from "@shared/permissions";
 import { MAX_OWNED_WORKSPACES } from "@shared/schemas/workspace";
 import { db } from "../utils/admin";
 import { type CallContext, requireAuth } from "../utils/context";
+import { DEMO_KEYWORD_GROUPS, DEMO_OFFERINGS } from "@shared/demo/publishAgency";
+import { createDemoWorkspaceHandler } from "./createDemoWorkspace";
 import { createWorkspaceHandler } from "./createWorkspace";
 import { acceptInvitationHandler, inviteMemberHandler, revokeInvitationHandler } from "./invitations";
 import { removeMemberHandler, transferOwnershipHandler, updateMemberRoleHandler } from "./members";
@@ -95,6 +97,28 @@ describe("createWorkspace", () => {
       await createWorkspaceHandler(db, alice, { name: `WS ${i}`, businessName: "PT Publish" });
     }
     await expectCode(createWorkspaceHandler(db, alice, { name: "Lebih", businessName: "PT Publish" }), "resource-exhausted");
+  });
+});
+
+describe("createDemoWorkspace", () => {
+  it("membuat workspace demo berisi katalog, keyword, dan pengaturan", async () => {
+    const { workspaceId, existing } = await createDemoWorkspaceHandler(db, alice);
+    expect(existing).toBe(false);
+    const ws = db.doc(`workspaces/${workspaceId}`);
+    expect((await ws.get()).data()).toMatchObject({ isDemo: true, ownerId: "alice" });
+    expect(await roleIn(workspaceId, "alice")).toBe("owner");
+    expect((await ws.collection("offerings").count().get()).data().count).toBe(DEMO_OFFERINGS.length);
+    const terms = DEMO_KEYWORD_GROUPS.reduce((n, g) => n + g.terms.length, 0);
+    expect((await ws.collection("keywords").count().get()).data().count).toBe(terms);
+    expect((await ws.collection("settings").doc("automation").get()).get("manualApproval")).toBe(true);
+  });
+
+  it("hanya satu workspace demo per pengguna, dan tidak dihitung dalam batas workspace", async () => {
+    const first = await createDemoWorkspaceHandler(db, alice);
+    await expect(createDemoWorkspaceHandler(db, alice)).resolves.toEqual({ workspaceId: first.workspaceId, existing: true });
+    for (let i = 0; i < MAX_OWNED_WORKSPACES; i++) {
+      await createWorkspaceHandler(db, alice, { name: `WS ${i}`, businessName: "PT Publish" });
+    }
   });
 });
 

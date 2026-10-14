@@ -46,7 +46,7 @@ export function ForgotPasswordPage() {
       }
     >
       {sentTo ? (
-        <Alert>
+        <Alert role="status">
           <MailCheck aria-hidden />
           <AlertTitle>Cek email Anda</AlertTitle>
           <AlertDescription>

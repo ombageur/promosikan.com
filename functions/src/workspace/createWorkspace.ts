@@ -8,7 +8,8 @@ import { memberRef } from "../utils/membership";
 export async function createWorkspaceHandler(db: Firestore, ctx: CallContext, data: unknown) {
   const input = parseInput(createWorkspaceInput, data);
 
-  const owned = await db.collection("workspaces").where("ownerId", "==", ctx.uid).count().get();
+  // Workspace demo tidak dihitung (lihat createDemoWorkspace).
+  const owned = await db.collection("workspaces").where("ownerId", "==", ctx.uid).where("isDemo", "==", false).count().get();
   if (owned.data().count >= MAX_OWNED_WORKSPACES) {
     throw new HttpsError("resource-exhausted", `Maksimal ${MAX_OWNED_WORKSPACES} workspace per pengguna.`);
   }

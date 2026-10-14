@@ -35,7 +35,9 @@ service cloud.firestore {
         'workspace.read': ['owner', 'admin', 'marketing', 'sales', 'viewer'],
         'workspace.update': ['owner', 'admin'],
         'members.manage': ['owner', 'admin'],
-        'audit.read': ['owner', 'admin']
+        'audit.read': ['owner', 'admin'],
+        'catalog.manage': ['owner', 'admin', 'marketing'],
+        'automation.manage': ['owner', 'admin']
       }[permission]);
     }
 
@@ -54,6 +56,36 @@ service cloud.firestore {
 
     function changedOnly(fields) {
       return request.resource.data.diff(resource.data).affectedKeys().hasOnly(fields);
+    }
+
+    function optList(data, field, max) {
+      return !(field in data) || (data[field] is list && data[field].size() <= max);
+    }
+
+    function optIdOrNull(data, field) {
+      return !(field in data) || data[field] == null || (data[field] is string && data[field].size() <= 128);
+    }
+
+    function optInt(data, field, min, max) {
+      return !(field in data) || (data[field] is int && data[field] >= min && data[field] <= max);
+    }
+
+    function optBool(data, field) {
+      return !(field in data) || data[field] is bool;
+    }
+
+    // Jejak penulis untuk dokumen yang ditulis client.
+    function stampedNow(data) {
+      return data.updatedAt == request.time && data.updatedBy == request.auth.uid;
+    }
+
+    function createdNow(data) {
+      return data.createdAt == request.time && data.createdBy == request.auth.uid;
+    }
+
+    function createdUnchanged() {
+      return request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.createdBy == resource.data.createdBy;
     }
 
     // ---------- users/{uid} ----------
@@ -115,6 +147,97 @@ service cloud.firestore {
         allow read: if can(wid, 'audit.read');
         allow write: if false;
       }
+
+      // ---------- Katalog (SPEC §6) — cermin offeringSchema di shared/schemas/catalog.ts ----------
+      match /offerings/{offeringId} {
+        allow read: if can(wid, 'workspace.read');
+        allow create: if can(wid, 'catalog.manage') && validOffering(request.resource.data) && createdNow(request.resource.data);
+        allow update: if can(wid, 'catalog.manage') && validOffering(request.resource.data) && createdUnchanged();
+        allow delete: if can(wid, 'catalog.manage');
+      }
+
+      match /keywordGroups/{groupId} {
+        allow read: if can(wid, 'workspace.read');
+        allow create: if can(wid, 'catalog.manage') && validKeywordGroup(request.resource.data) && createdNow(request.resource.data);
+        allow update: if can(wid, 'catalog.manage') && validKeywordGroup(request.resource.data) && createdUnchanged();
+        allow delete: if can(wid, 'catalog.manage');
+      }
+
+      match /keywords/{keywordId} {
+        allow read: if can(wid, 'workspace.read');
+        allow create: if can(wid, 'catalog.manage') && validKeyword(request.resource.data) && createdNow(request.resource.data);
+        allow update: if can(wid, 'catalog.manage') && validKeyword(request.resource.data) && createdUnchanged();
+        allow delete: if can(wid, 'catalog.manage');
+      }
+
+      // ---------- Pengaturan (SPEC §19) — hanya dokumen `automation` ----------
+      match /settings/{settingsId} {
+        allow read: if can(wid, 'workspace.read');
+        allow create, update: if settingsId == 'automation'
+          && can(wid, 'automation.manage')
+          && validAutomation(request.resource.data);
+        allow delete: if false;
+      }
+    }
+
+    function validOffering(data) {
+      return data.keys().hasOnly(['name', 'type', 'category', 'description', 'benefits', 'targetAudience',
+                                  'problemsSolved', 'keywords', 'priceRange', 'usp', 'landingPageUrl',
+                                  'allowedClaims', 'isActive', 'createdAt', 'createdBy', 'updatedAt', 'updatedBy'])
+        && reqString(data, 'name', 2, 100)
+        && data.type in ['service', 'product']
+        && optString(data, 'category', 100)
+        && optString(data, 'description', 1000)
+        && optString(data, 'targetAudience', 300)
+        && optString(data, 'priceRange', 100)
+        && optString(data, 'usp', 300)
+        && optList(data, 'benefits', 10)
+        && optList(data, 'problemsSolved', 10)
+        && optList(data, 'keywords', 20)
+        && optList(data, 'allowedClaims', 10)
+        && (!('landingPageUrl' in data) || data.landingPageUrl == ''
+            || (data.landingPageUrl is string && data.landingPageUrl.size() <= 2048
+                && data.landingPageUrl.matches('^https?://.+')))
+        && data.isActive is bool
+        && stampedNow(data);
+    }
+
+    function validKeywordGroup(data) {
+      return data.keys().hasOnly(['name', 'offeringId', 'createdAt', 'createdBy', 'updatedAt', 'updatedBy'])
+        && reqString(data, 'name', 2, 60)
+        && optIdOrNull(data, 'offeringId')
+        && stampedNow(data);
+    }
+
+    function validKeyword(data) {
+      return data.keys().hasOnly(['term', 'groupId', 'offeringId', 'isActive', 'createdAt', 'createdBy', 'updatedAt', 'updatedBy'])
+        && reqString(data, 'term', 2, 100)
+        && optIdOrNull(data, 'groupId')
+        && optIdOrNull(data, 'offeringId')
+        && data.isActive is bool
+        && stampedNow(data);
+    }
+
+    // Cermin automationSettingsSchema di shared/schemas/automation.ts.
+    function validAutomation(data) {
+      return data.keys().hasOnly(['monitoringEnabled', 'monitoringIntervalMinutes', 'minOpportunityScore',
+                                  'minMatchScore', 'defaultReplyStyle', 'manualApproval', 'dailyReplyLimit',
+                                  'authorCooldownDays', 'duplicateDetection', 'notifyInApp', 'notifyEmail',
+                                  'updatedAt', 'updatedBy'])
+        && optBool(data, 'monitoringEnabled')
+        && (!('monitoringIntervalMinutes' in data) || data.monitoringIntervalMinutes in [60, 120, 240, 720, 1440])
+        && optInt(data, 'minOpportunityScore', 0, 100)
+        && optInt(data, 'minMatchScore', 0, 100)
+        && (!('defaultReplyStyle' in data)
+            || data.defaultReplyStyle in ['friendly', 'professional', 'consultative', 'helpful', 'soft_selling'])
+        // Tidak ada auto-reply: approval manual wajib (SPEC §19).
+        && data.manualApproval == true
+        && optInt(data, 'dailyReplyLimit', 1, 100)
+        && optInt(data, 'authorCooldownDays', 1, 30)
+        && optBool(data, 'duplicateDetection')
+        && optBool(data, 'notifyInApp')
+        && optBool(data, 'notifyEmail')
+        && stampedNow(data);
     }
 
     // Collection group: daftar workspace milik pengguna (workspace switcher).

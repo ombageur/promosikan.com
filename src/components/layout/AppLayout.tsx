@@ -1,8 +1,9 @@
 import { Check, ChevronsUpDown, LogOut, Menu, Plus, X } from "lucide-react";
 import { useState } from "react";
-import { NavLink, Outlet, useNavigate } from "react-router";
+import { Link, NavLink, Outlet, useNavigate } from "react-router";
 import { ROLE_LABELS } from "@shared/permissions";
-import { Badge } from "@/components/ui/badge";
+import { DemoBadge } from "@/components/intelligence/badges";
+import { DemoDataBanner } from "@/components/intelligence/states";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -22,8 +23,7 @@ import { NAV_GROUPS } from "./navigation";
 import { WorkspaceAvatar } from "./WorkspaceAvatar";
 
 function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
-  const { workspace, can } = useWorkspace();
-  const base = `/w/${workspace.id}`;
+  const { basePath: base, can, isPublicDemo } = useWorkspace();
 
   return (
     <nav aria-label="Navigasi utama" className="grid gap-5">
@@ -32,34 +32,23 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
           <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{group.label}</p>
           <ul className="grid gap-0.5">
             {group.items
-              .filter((item) => !item.permission || can(item.permission))
+              .filter((item) => (!item.permission || can(item.permission)) && !(isPublicDemo && item.requiresAccount))
               .map(({ label, icon: Icon, path, end }) => (
                 <li key={label}>
-                  {path === null ? (
-                    <span
-                      className="flex cursor-not-allowed items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground/70"
-                      title="Tersedia di fase berikutnya"
-                    >
-                      <Icon className="size-4" aria-hidden />
-                      {label}
-                      <span className="ml-auto text-[10px] font-medium">Segera</span>
-                    </span>
-                  ) : (
-                    <NavLink
-                      to={path ? `${base}/${path}` : base}
-                      end={end}
-                      onClick={onNavigate}
-                      className={({ isActive }) =>
-                        cn(
-                          "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                          isActive ? "bg-secondary text-primary" : "text-slate-600 hover:bg-slate-100 hover:text-foreground",
-                        )
-                      }
-                    >
-                      <Icon className="size-4" aria-hidden />
-                      {label}
-                    </NavLink>
-                  )}
+                  <NavLink
+                    to={path ? `${base}/${path}` : base}
+                    end={end}
+                    onClick={onNavigate}
+                    className={({ isActive }) =>
+                      cn(
+                        "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                        isActive ? "bg-secondary text-primary" : "text-slate-600 hover:bg-slate-100 hover:text-foreground",
+                      )
+                    }
+                  >
+                    <Icon className="size-4" aria-hidden />
+                    {label}
+                  </NavLink>
                 </li>
               ))}
           </ul>
@@ -138,14 +127,28 @@ function UserMenu() {
   );
 }
 
+function PublicDemoBar() {
+  return (
+    <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
+      <span className="mr-auto hidden truncate text-sm font-semibold sm:block">Demo — Publish Agency</span>
+      <Button variant="ghost" nativeButton={false} render={<Link to="/login" />}>
+        Masuk
+      </Button>
+      <Button nativeButton={false} render={<Link to="/register" />}>
+        Daftar gratis
+      </Button>
+    </div>
+  );
+}
+
 export function AppLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { workspace } = useWorkspace();
+  const { workspace, basePath, isPublicDemo } = useWorkspace();
 
   return (
     <div className="min-h-svh bg-background">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col overflow-y-auto border-r bg-white px-3 py-5 lg:flex">
-        <Brand to={`/w/${workspace.id}`} className="mb-7 px-2" />
+        <Brand to={basePath} className="mb-7 px-2" />
         <SidebarNav />
       </aside>
 
@@ -154,7 +157,7 @@ export function AppLayout() {
           <button type="button" className="absolute inset-0 bg-slate-900/40" aria-label="Tutup menu" onClick={() => setMobileOpen(false)} />
           <aside className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col overflow-y-auto bg-white px-3 py-5 shadow-xl">
             <div className="mb-7 flex items-center justify-between px-2">
-              <Brand to={`/w/${workspace.id}`} />
+              <Brand to={basePath} />
               <Button variant="ghost" size="icon" onClick={() => setMobileOpen(false)} aria-label="Tutup menu">
                 <X />
               </Button>
@@ -169,12 +172,19 @@ export function AppLayout() {
           <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setMobileOpen(true)} aria-label="Buka menu">
             <Menu />
           </Button>
-          <div className="min-w-0 flex-1">
-            <WorkspaceSwitcher />
-          </div>
-          {workspace.isDemo && <Badge variant="secondary">Data Demo</Badge>}
-          <UserMenu />
+          {isPublicDemo ? (
+            <PublicDemoBar />
+          ) : (
+            <>
+              <div className="min-w-0 flex-1">
+                <WorkspaceSwitcher />
+              </div>
+              {workspace.isDemo && <DemoBadge />}
+              <UserMenu />
+            </>
+          )}
         </header>
+        <DemoDataBanner />
         <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
           <Outlet />
         </main>

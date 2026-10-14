@@ -9,6 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       VITE_USE_EMULATORS: "true"
+      FUNCTIONS_DISCOVERY_TIMEOUT: "60"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

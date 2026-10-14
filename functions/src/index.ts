@@ -3,6 +3,7 @@ import { setGlobalOptions } from "firebase-functions/v2";
 import { onCall, onRequest } from "firebase-functions/v2/https";
 import { db } from "./utils/admin";
 import { callableOptions, requireAuth } from "./utils/context";
+import { createDemoWorkspaceHandler } from "./workspace/createDemoWorkspace";
 import { createWorkspaceHandler } from "./workspace/createWorkspace";
 import { acceptInvitationHandler, inviteMemberHandler, revokeInvitationHandler } from "./workspace/invitations";
 import { removeMemberHandler, transferOwnershipHandler, updateMemberRoleHandler } from "./workspace/members";
@@ -19,6 +20,7 @@ export const health = onRequest((_req, res) => {
 });
 
 export const createWorkspace = onCall(callableOptions, (req) => createWorkspaceHandler(db, requireAuth(req), req.data));
+export const createDemoWorkspace = onCall(callableOptions, (req) => createDemoWorkspaceHandler(db, requireAuth(req)));
 export const inviteMember = onCall(callableOptions, (req) =>
   inviteMemberHandler(db, requireAuth(req), req.data, { appUrl: appUrl.value() }),
 );

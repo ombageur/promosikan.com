@@ -14,7 +14,8 @@ Platform AI multi-tenant untuk customer discovery dan smart promotion: menemukan
 |---|---|
 | 0 — Migrasi & Fondasi | ✅ selesai |
 | 1 — Auth, Workspace & RBAC | ✅ selesai |
-| 2 — App Shell, Katalog & Demo Mode | berikutnya |
+| 2 — App Shell, Katalog & Demo Mode | ✅ selesai |
+| 3 — AI Intelligence | berikutnya |
 
 Yang sudah berfungsi:
 
@@ -22,8 +23,10 @@ Yang sudah berfungsi:
 - **Workspace multi-tenant:** buat workspace, workspace switcher, profil bisnis & logo, data terisolasi per workspace.
 - **Tim & role** (Owner, Admin, Marketing, Sales, Viewer — matriks di `shared/permissions.ts`): undang lewat link (berlaku 7 hari, sekali pakai), ubah role, keluarkan anggota, keluar, transfer ownership. Semua perubahan tercatat di audit log.
 - **Keamanan:** Firestore & Storage rules per role, Cloud Functions yang memverifikasi login, email terverifikasi, keanggotaan, dan izin.
-- **Demo publik `/demo`** (Publish Agency) — **data simulasi**, tidak pernah mengirim apa pun ke platform sosial.
-- Menu Discover, Opportunities, Reply Center, dll. tampil di sidebar sebagai "Segera" sampai fasenya dikerjakan.
+- **Katalog & keyword (nyata di Firestore):** Products & Services, grup keyword yang ditautkan ke layanan, aktif/nonaktif keyword, dan pengaturan Automation (approval manual selalu wajib).
+- **Semua halaman dashboard:** Overview, Discover, Opportunities, Smart Match, Reply Center, Leads CRM (Kanban), Analytics, Integrations, Billing. Untuk workspace nyata, halaman berbasis data AI menampilkan state kosong sampai fasenya dikerjakan — tidak ada data palsu.
+- **Demo:** `/demo` publik tanpa login (data di memori browser), dan tombol **Coba workspace demo** yang membuat workspace berisi katalog Publish Agency. Semua data simulasi diberi banner **Data Demo** dan tidak pernah dikirim ke platform sosial.
+- Skema data: [docs/FIRESTORE_SCHEMA.md](docs/FIRESTORE_SCHEMA.md).
 
 ## Prasyarat
 
@@ -52,6 +55,8 @@ npm run test:emulator # Security Rules + integrasi Functions + alur e2e (butuh J
 npm run build         # output: dist/
 ```
 
+> **Windows:** jika Functions emulator gagal dengan "Cannot determine backend specification. Timeout after 10000", jalankan dengan `FUNCTIONS_DISCOVERY_TIMEOUT=60` (cold start lambat).
+>
 > **Windows:** setelah `npm run test:emulator`, proses Java emulator Firestore kadang tetap hidup sehingga run berikutnya gagal dengan "port taken". Hentikan dengan:
 > `Get-NetTCPConnection -LocalPort 8080 -State Listen | % { Stop-Process -Id $_.OwningProcess -Force }`
 

@@ -80,7 +80,7 @@ export function InviteMemberDialog() {
 
         {result ? (
           <div className="grid gap-3">
-            <Alert>
+            <Alert role="status">
               <AlertDescription>
                 Undangan untuk <strong>{result.email}</strong> dibuat. Jika email undangan belum aktif di workspace ini, bagikan
                 link berikut secara langsung:

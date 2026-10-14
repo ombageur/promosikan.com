@@ -1,11 +1,12 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowRight, PlayCircle } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router";
 import { toast } from "sonner";
 import { createWorkspaceInput, type CreateWorkspaceInput } from "@shared/schemas/workspace";
 import { Field } from "@/components/forms/Field";
+import { TryDemoWorkspaceButton } from "@/components/forms/TryDemoWorkspaceButton";
 import { fieldAria } from "@/components/forms/field-aria";
 import { AuthLayout } from "@/components/layout/AuthLayout";
 import { Button } from "@/components/ui/button";
@@ -44,9 +45,8 @@ export function OnboardingPage() {
       description="Workspace menyimpan profil bisnis, katalog, dan tim Anda. Data setiap workspace terpisah."
       footer={
         isFirst ? (
-          <Link to="/demo" className="inline-flex items-center gap-1.5 font-semibold text-primary hover:underline">
-            <PlayCircle className="size-4" aria-hidden />
-            Lihat demo Publish Agency dulu
+          <Link to="/demo" className="font-semibold text-primary hover:underline">
+            Lihat demo publik tanpa membuat apa pun
           </Link>
         ) : (
           <Link to="/app" className="font-semibold text-primary hover:underline">
@@ -70,6 +70,10 @@ export function OnboardingPage() {
           {!isSubmitting && <ArrowRight aria-hidden />}
         </Button>
       </form>
+      <div className="mt-5 border-t pt-5 text-center">
+        <p className="mb-3 text-sm text-muted-foreground">Ingin mencoba dulu dengan data contoh Publish Agency?</p>
+        <TryDemoWorkspaceButton className="h-10 w-full" />
+      </div>
     </AuthLayout>
   );
 }

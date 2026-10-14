@@ -88,11 +88,15 @@ Spesifikasi lengkap ada di [SPEC.md](SPEC.md). Setiap fase punya tujuan, cakupan
 - Rules untuk `offerings`, `keywordGroups`, `keywords`, dan `settings` beserta tesnya.
 - Dokumen `docs/FIRESTORE_SCHEMA.md`.
 
-**DoD:**
-- [ ] Semua halaman di sidebar bisa dibuka, responsif di 375 px, dan punya state loading, empty, serta error.
-- [ ] Produk dan keyword tersimpan dan dapat diedit sesuai role.
-- [ ] Tidak ada data demo yang tampil tanpa label "Data Demo".
-- [ ] Lighthouse accessibility ≥ 90 di halaman utama.
+**DoD:** ✅ selesai 2026-10-15 (branch `phase-2-shell-catalog`)
+- [x] Semua halaman di sidebar bisa dibuka, responsif di 375 px, dan punya state loading, empty, serta error. — smoke test headless Chrome: 13 halaman demo × 375/1280 px tanpa error console & tanpa overflow horizontal; 13 halaman workspace nyata setelah login (emulator)
+- [x] Produk dan keyword tersimpan dan dapat diedit sesuai role. — `tests/rules/catalog.test.ts` (matriks role), smoke test UI menyimpan produk/grup/keyword/automation ke Firestore emulator
+- [x] Tidak ada data demo yang tampil tanpa label "Data Demo". — banner di layout untuk setiap workspace `isDemo`; dicek otomatis di setiap halaman demo
+- [x] Lighthouse accessibility ≥ 90 di halaman utama. — 100 di beranda, login, daftar, dan 8 halaman demo
+
+**Catatan Fase 2:**
+- Data peluang/draft/lead/statistik di workspace demo berasal dari fixtures di browser (`shared/demo/publishAgency.ts`); katalog workspace demo tersimpan nyata di Firestore. Workspace nyata menampilkan state kosong yang jujur sampai Fase 3–6.
+- Halaman di balik login belum diaudit Lighthouse (hanya smoke test).
 
 ---
 

@@ -10,6 +10,10 @@ export default tseslint.config(
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ["**/*.{ts,tsx}"],
     languageOptions: { ecmaVersion: 2023, globals: { ...globals.browser, ...globals.node } },
+    rules: {
+      // Konvensi: variabel berawalan "_" sengaja dibuang (mis. saat memisahkan field dengan rest).
+      "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_", varsIgnorePattern: "^_", ignoreRestSiblings: true }],
+    },
   },
   {
     files: ["src/**/*.{ts,tsx}"],
