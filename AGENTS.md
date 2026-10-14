@@ -11,7 +11,7 @@ Bekerjalah sebagai senior React engineer, Firebase architect, AI engineer, dan S
 3. TypeScript strict di semua tempat. Tidak boleh ada `any` tanpa komentar alasan.
 4. Skema Zod, matriks permission, dan scoring berada di `shared/` dan dipakai bersama oleh frontend dan functions.
 5. Secret hanya ada di Secret Manager (`defineSecret`). Variabel `VITE_*` bersifat publik dan tidak boleh berisi secret.
-6. OpenAI dan Threads hanya dipanggil dari Cloud Functions.
+6. Claude API (Anthropic) dan Threads hanya dipanggil dari Cloud Functions, dengan SDK resmi `@anthropic-ai/sdk`.
 7. Setiap callable function memeriksa Auth, email terverifikasi, App Check, membership, dan permission, lalu memvalidasi input dengan Zod.
 8. Field yang dikelola backend tidak boleh bisa ditulis client. Buktikan dengan tes rules.
 9. Jangan membuat integrasi API palsu. Jika API belum tersedia, tampilkan status "belum tersedia" dengan jujur.

@@ -105,7 +105,7 @@ Spesifikasi lengkap ada di [SPEC.md](SPEC.md). Setiap fase punya tujuan, cakupan
 **Tujuan:** AI menganalisis percakapan, memberi skor, mencocokkan dengan katalog, dan menyusun draft balasan. Semua ini bisa diuji lewat **Analisis Manual**, sebelum Threads terhubung.
 
 **Cakupan:**
-- Klien OpenAI di functions dengan `defineSecret`, Structured Outputs, validasi Zod, timeout, dan retry terbatas.
+- Klien Claude API (`@anthropic-ai/sdk`) di functions dengan `defineSecret("ANTHROPIC_API_KEY")`, structured outputs (`output_config.format`) + validasi Zod, effort eksplisit per rute, prompt caching, penanganan `stop_reason: "refusal"` (+ fallback server-side), dan retry terbatas.
 - Prompt berversi di `functions/src/ai/prompts/`, dengan mitigasi prompt injection.
 - `analyzeConversation` (callable, untuk input manual) dan `analyzePost` (task queue, dipakai di Fase 4). Analisis dan matching dijalankan dalam satu panggilan.
 - Skor akhir dihitung oleh `shared/scoring.ts`.
@@ -117,9 +117,9 @@ Spesifikasi lengkap ada di [SPEC.md](SPEC.md). Setiap fase punya tujuan, cakupan
 
 **DoD:**
 - [ ] Output AI yang tidak valid menurut Zod ditolak dan dicatat, tanpa membuat aplikasi crash.
-- [ ] Ada tes unit dengan klien OpenAI tiruan (mock) untuk parsing, skor, kasus "tidak ada yang cocok", dan kegagalan API.
+- [ ] Ada tes unit dengan klien Claude tiruan (mock) untuk parsing, skor, kasus "tidak ada yang cocok", dan kegagalan API.
 - [ ] Ada set evaluasi berisi ≥ 30 contoh post berbahasa Indonesia (dengan label yang diharapkan), dan skrip `npm run eval:ai` melaporkan akurasi klasifikasi.
-- [ ] Kuota habis menghasilkan pesan yang jelas, dan tidak ada panggilan OpenAI yang terjadi.
+- [ ] Kuota habis menghasilkan pesan yang jelas, dan tidak ada panggilan Claude API yang terjadi.
 - [ ] Tidak ada secret di bundle frontend (diverifikasi dengan grep pada `dist/`).
 
 ---
@@ -205,7 +205,7 @@ Spesifikasi lengkap ada di [SPEC.md](SPEC.md). Setiap fase punya tujuan, cakupan
 **Cakupan:**
 - Review keamanan: rules, functions, App Check enforcement, CSP header di Hosting, dan dependency audit.
 - Kepatuhan: UU PDP, alur hapus akun dan data, serta pemeriksaan retensi.
-- Observability: alert error, budget alert GCP dan OpenAI, serta dashboard biaya per workspace.
+- Observability: alert error, budget alert GCP dan Anthropic, serta dashboard biaya per workspace.
 - Uji beban pipeline monitoring dengan jumlah workspace sintetis.
 - Backup Firestore terjadwal (PITR atau export).
 - Pilot dengan Publish Agency di production, mengumpulkan feedback, lalu memperbaiki temuan.

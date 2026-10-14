@@ -73,7 +73,7 @@ docs/       SPEC, ROADMAP
 ## Keamanan & konfigurasi
 
 - Semua variabel `VITE_*` masuk ke bundle browser dan bersifat **publik**. Konfigurasi web Firebase memang publik; keamanan ditegakkan oleh Security Rules dan App Check.
-- Secret (OpenAI, Threads, kunci enkripsi) **hanya** di Secret Manager: `npx firebase functions:secrets:set NAMA_SECRET`.
+- Secret (Anthropic API key, Threads, kunci enkripsi) **hanya** di Secret Manager: `npx firebase functions:secrets:set NAMA_SECRET`.
 - Firebase Analytics sengaja belum diaktifkan sampai ada kebijakan persetujuan sesuai UU PDP.
 - Konfigurasi Functions non-secret ada di `functions/.env.<project-id>` (contoh: [functions/.env.example](functions/.env.example)): `APP_URL` untuk link undangan, `ENFORCE_APP_CHECK`.
 

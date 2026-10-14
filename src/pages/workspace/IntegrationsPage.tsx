@@ -48,7 +48,7 @@ export function IntegrationsPage() {
               <Bot className="size-5" aria-hidden />
             </div>
             <CardTitle className="flex flex-wrap items-center gap-2">
-              AI (OpenAI)
+              AI (Claude)
               <Badge variant="outline">
                 <Clock aria-hidden />
                 Fase 3

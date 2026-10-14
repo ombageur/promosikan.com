@@ -11,7 +11,7 @@
 | Backend | Firebase Cloud Functions Gen 2 (TypeScript) |
 | Database | Cloud Firestore |
 | Hosting | Firebase Hosting |
-| AI | OpenAI API (hanya dari Cloud Functions) |
+| AI | Claude API — Anthropic (hanya dari Cloud Functions) |
 | Integrasi sosial pertama | Meta Threads API (resmi) |
 | Bahasa default | Bahasa Indonesia |
 | Bisnis pilot | Publish Agency |
@@ -51,7 +51,7 @@ Untuk pekerjaan latar belakang:
 - **Firestore triggers** (`onDocumentWritten`) untuk agregasi metrik dan efek samping ringan.
 
 ### Integrasi eksternal
-OpenAI API, Meta Threads API, OAuth 2.0, dan layanan email transaksional untuk undangan anggota (misalnya Firebase Extension "Trigger Email").
+Claude API (Anthropic), Meta Threads API, OAuth 2.0, dan layanan email transaksional untuk undangan anggota (misalnya Firebase Extension "Trigger Email").
 
 ### Tidak digunakan
 Next.js, Prisma, PostgreSQL, Redis, BullMQ, dan server Express terpisah. Pengecualian: Express boleh dipakai *di dalam* satu `onRequest` function untuk OAuth callback dan webhook, bukan sebagai server aplikasi.
@@ -70,7 +70,7 @@ React SPA ──▶ Firebase Auth ──▶ Firestore Security Rules ──▶ F
 Operasi sensitif (AI, integrasi, publikasi, perubahan role):
 React SPA ──▶ Callable Function (Auth + App Check)
           ──▶ Validasi Zod + cek membership/permission
-          ──▶ Business logic ──▶ OpenAI / Threads API
+          ──▶ Business logic ──▶ Claude API / Threads API
           ──▶ Firestore (Admin SDK) + audit log
 
 Monitoring berkala:
@@ -81,7 +81,7 @@ Cloud Scheduler ──▶ scheduledSocialMonitoring (fan-out)
 ```
 
 **Aturan arsitektur:**
-- Browser tidak pernah memegang secret dan tidak pernah memanggil OpenAI atau Threads secara langsung.
+- Browser tidak pernah memegang secret dan tidak pernah memanggil Claude API atau Threads secara langsung.
 - Satu scheduler melakukan fan-out ke task per workspace. Jangan membuat satu scheduler per workspace.
 - Semua handler task harus **idempoten** karena Cloud Tasks bisa mengirim ulang task yang sama.
 - Field yang dihasilkan backend (hasil AI, status publikasi, usage, billing) hanya boleh ditulis lewat Admin SDK.
@@ -199,7 +199,7 @@ Pengguna dapat menempelkan teks post atau URL secara manual untuk dianalisis. Fi
 
 AI hanya mengembalikan **sub-skor dan alasan**. **Skor akhir dihitung di kode** (fungsi murni di `shared/scoring.ts`) supaya hasilnya deterministik, bisa dites, dan tidak bisa "dikarang" oleh model.
 
-### Output AI (Structured Outputs + validasi Zod)
+### Output AI (structured outputs Claude + validasi Zod)
 ```ts
 {
   language: string,
@@ -269,7 +269,7 @@ Jika `redFlags` tidak kosong, peluang ditandai **Perlu review manual** dan tidak
 - **Tanpa klaim palsu.** AI hanya boleh menyebut fakta dari profil bisnis dan `allowedClaims`. Tidak boleh menjanjikan hasil ("pasti ranking 1"), menyebut harga yang tidak ada di katalog, atau mengarang testimoni.
 - **Batas panjang** mengikuti batas karakter Threads, dengan default ≤ 300 karakter.
 - **Reply Quality Validation.** Draft melewati pemeriksaan kedua sebelum boleh di-approve: relevansi, nada, klaim, kemiripan dengan balasan sebelumnya (anti-template-spam), dan bahasa. Hasil validasi ditampilkan ke reviewer.
-- **Fallback.** Jika OpenAI gagal, tampilkan error yang jelas dan sediakan template manual. Jangan pernah mengirim draft kosong atau setengah jadi.
+- **Fallback.** Jika Claude API gagal atau menolak (refusal), tampilkan error yang jelas dan sediakan template manual. Jangan pernah mengirim draft kosong atau setengah jadi.
 
 ---
 
@@ -404,19 +404,39 @@ Perhitungan skor **bukan** function terpisah, melainkan fungsi murni di `shared/
 
 ---
 
-## 17. Integrasi OpenAI
+## 17. Integrasi Claude API (Anthropic)
 
 **Kapabilitas:** klasifikasi intent, deteksi masalah, sub-skor peluang, product matching, pembuatan draft balasan, dan validasi kualitas balasan.
 
-**Pemilihan model:** nama model disimpan sebagai konfigurasi (`OPENAI_MODEL_FAST`, `OPENAI_MODEL_SMART`), bukan hardcode. Model ekonomis dipakai untuk analisis dan prefilter. Model yang lebih kuat dipakai untuk draft balasan dan matching dengan katalog besar.
+**SDK & akses:**
+- Gunakan SDK resmi `@anthropic-ai/sdk`, hanya di dalam Cloud Functions. Endpoint yang dipakai adalah `POST /v1/messages`.
+- API key `ANTHROPIC_API_KEY` disimpan di Secret Manager dan dibaca lewat `defineSecret()`.
+- Jangan memakai shim yang kompatibel dengan OpenAI.
+
+**Model:**
+- Default `claude-opus-5-5` ($4 input / $20 output per 1 juta token; cache read $0,20).
+- Nama model disimpan sebagai konfigurasi (`CLAUDE_MODEL`), bukan hardcode, supaya bisa diganti tanpa mengubah kode.
+- Model yang lebih murah untuk rute tertentu (misalnya Claude Haiku 5.5 untuk prefilter) adalah keputusan terbuka #7. Keputusan itu harus diambil berdasarkan hasil eval, bukan asumsi.
+
+**Aturan pemanggilan (berlaku untuk Claude Opus 5.5):**
+- **Effort per rute, selalu diset eksplisit** lewat `output_config.effort`, karena default di Opus 5.5 adalah `medium`. Gunakan `low` untuk analisis dan matching, dan `medium` untuk draft balasan. Thinking tidak bisa dimatikan di model ini; effort adalah satu-satunya pengatur.
+- **Structured outputs** lewat `output_config.format` (JSON Schema dari skema Zod di `shared/`). Hasilnya divalidasi ulang dengan Zod sebelum disimpan.
+- Fitur berikut tidak dipakai, karena ditolak di model ini: prefill assistant, forced `tool_choice` (`any`/`tool`), dan `temperature`.
+- **Penanganan refusal:**
+  - Selalu periksa `stop_reason` sebelum membaca konten.
+  - Aktifkan fallback server-side (`fallbacks: "default"`, beta `server-side-fallback-2026-07-01`).
+  - Jika seluruh rantai tetap menolak (`stop_reason: "refusal"`), tandai peluang sebagai **Perlu review manual**, tanpa draft.
+- **Error:** tangkap error SDK per jenisnya. `RateLimitError` dan 5xx di-retry dengan batas (SDK default 2 kali, ditambah retry task queue). `BadRequestError` tidak di-retry dan dicatat.
 
 **Optimasi biaya:**
 - Analisis dan matching dijalankan dalam **satu panggilan** per post.
+- **Prompt caching:** instruksi sistem, profil bisnis, dan katalog diletakkan di awal prompt dengan `cache_control`, sedangkan teks post diletakkan paling akhir. Prefix tidak boleh memuat timestamp atau ID. Efektivitasnya diverifikasi lewat `usage.cache_read_input_tokens`.
+- **Message Batches API** (biaya 50% lebih murah, asinkron) dipakai untuk analisis hasil monitoring terjadwal di Fase 4, karena latensinya tidak kritis. Analisis manual dan draft balasan memakai panggilan biasa.
 - Draft balasan dibuat **sesuai permintaan** (saat pengguna membuka peluang) atau otomatis hanya untuk skor ≥ ambang. Jangan membuat draft untuk semua post.
 - Hasil di-cache berdasarkan `postId` + versi prompt + `updatedAt` katalog. Jangan menganalisis ulang tanpa alasan.
-- Teks post dipotong maksimal 2.000 karakter, dan katalog diringkas.
+- Teks post dibatasi maksimal 2.000 karakter. Post yang lebih panjang ditandai, bukan dipotong diam-diam.
 - Kuota AI per workspace per bulan sesuai plan. Panggilan ditolak dengan pesan jelas jika kuota habis.
-- Catat token input/output dan estimasi biaya di `usage/{yyyy-mm}`.
+- Catat token input, output, cache write, dan cache read beserta estimasi biaya di `usage/{yyyy-mm}`.
 - Versi prompt disimpan di kode (`functions/src/ai/prompts/*.ts`) dan dicatat di setiap hasil analisis.
 
 **Keamanan:** API key hanya ada di Secret Manager. Tidak boleh ada variabel `VITE_*` yang berisi secret, dan semua variabel `VITE_*` dianggap publik.
@@ -565,10 +585,10 @@ promosikan.com/
 
 - **Tiga project Firebase terpisah:** `promosikan-dev` (emulator dan uji coba), `promosikan-staging`, dan `promosikan-prod`, dengan alias di `.firebaserc`.
 - Konfigurasi frontend memakai `.env.development`, `.env.staging`, dan `.env.production`. Isinya hanya konfigurasi web Firebase yang memang publik.
-- Secret per project ada di Secret Manager: `OPENAI_API_KEY`, `THREADS_APP_ID`, `THREADS_APP_SECRET`, dan `TOKEN_ENCRYPTION_KEY`.
+- Secret per project ada di Secret Manager: `ANTHROPIC_API_KEY`, `THREADS_APP_ID`, `THREADS_APP_SECRET`, dan `TOKEN_ENCRYPTION_KEY`.
 - Hosting: output Vite `dist/`, dengan rewrite `** → /index.html` untuk SPA. Tambahkan juga rewrite `/oauth/threads/callback` ke function.
 - CI (GitHub Actions): lint, typecheck, unit test, tes rules di emulator, dan build. Deploy ke staging dari `main`. Deploy ke production melalui tag atau persetujuan manual.
-- Monitoring: Cloud Logging, error alert untuk function yang gagal, dan budget alert di GCP serta OpenAI.
+- Monitoring: Cloud Logging, error alert untuk function yang gagal, dan budget alert di GCP serta Anthropic Console (batas pengeluaran workspace API).
 
 ---
 
@@ -577,6 +597,7 @@ promosikan.com/
 - Patuhi **UU No. 27/2022 tentang Pelindungan Data Pribadi (UU PDP)**: tujuan pemrosesan yang jelas, retensi terbatas, hak hapus, dan kebijakan privasi publik.
 - Patuhi **Meta Platform Terms** dan **Developer Policies**. Data Threads hanya dipakai untuk tujuan yang dideklarasikan saat App Review.
 - Hanya simpan data post yang diperlukan. Jangan membangun profil personal di luar konteks bisnis.
+- Teks post dikirim ke Claude API (Anthropic) untuk dianalisis. Kirim seminimal mungkin (tanpa data akun yang tidak perlu), tinjau kebijakan retensi data Anthropic untuk organisasi API, dan sebutkan pemrosesan oleh penyedia AI di Kebijakan Privasi.
 - Saat akun Threads diputus atau callback penghapusan data diterima, hapus token dan data terkait sesuai kebijakan.
 - Tolak atau tandai percakapan sensitif: kesehatan pribadi, keuangan pribadi yang rentan, anak di bawah umur, duka, dan konflik.
 - Halaman publik **Kebijakan Privasi** dan **Syarat Layanan** wajib ada sebelum App Review.
@@ -595,3 +616,4 @@ Perlu diputuskan pemilik produk sebelum fase terkait dimulai:
 | 4 | Domain produksi dan email pengirim | 1 |
 | 5 | Region Firebase/Functions final (`asia-southeast2` vs `asia-southeast1`) | 0 |
 | 6 | Platform sosial berikutnya setelah Threads | setelah 8 |
+| 7 | Model Claude per rute: tetap `claude-opus-5-5` di semua rute, atau model lebih murah (mis. Claude Haiku 5.5) untuk prefilter/analisis — diputuskan dari hasil eval Fase 3 | 3 |
