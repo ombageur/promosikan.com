@@ -1,5 +1,34 @@
 # Deploy ke produksi (`promosikan-com`)
 
+**Status: LIVE di https://promosikan.com sejak 15 Oktober 2026.**
+
+| Komponen | Status |
+|---|---|
+| Hosting | ✅ `promosikan.com` (domain utama). `promosikan-com.web.app` & `.firebaseapp.com` dialihkan ke sini |
+| Cloud Functions | ✅ 21 function ACTIVE di `asia-southeast2` |
+| Firestore rules, index, TTL; Storage rules | ✅ ter-deploy |
+| Auth: Email/Password & Google | ✅ aktif |
+| Storage bucket | ✅ `promosikan-com.firebasestorage.app` |
+| Secret: `ANTHROPIC_API_KEY`, `TOKEN_ENCRYPTION_KEY`, `THREADS_APP_SECRET` | ✅ |
+| Threads App ID | ✅ `4495723990677051` (di `functions/.env.promosikan-com`) |
+| SSL `promosikan.com` | ⏳ sertifikat sementara aktif; sertifikat permanen sedang diterbitkan Firebase |
+| `www.promosikan.com` | ❌ belum ditambahkan (lihat §7) |
+| Email `privacy@promosikan.com` | ❌ domain belum punya record MX |
+| Menghubungkan akun Threads | ⏳ perlu login Meta oleh pemilik akun (tester) |
+
+**E2E live terverifikasi 15 Oktober 2026:**
+- Alur: login → buat workspace → upload logo → katalog → Analisis Manual → draft → persingkat → sunting → periksa kualitas. Claude sungguhan; tanpa error console. Data uji sudah dihapus.
+- Callback Threads menolak `state` palsu dan `signed_request` tidak valid.
+- Tombol "Hubungkan Threads" membuka OAuth Meta dengan App ID, redirect, dan scope yang benar.
+
+### Pelajaran dari deploy pertama (jangan diulang)
+1. **Semua secret yang dirujuk kode wajib ada**, bahkan saat deploy sebagian function.
+2. **API key Anthropic harus terikat ke workspace Anthropic.** Key yang tidak terikat workspace ditolak dengan pesan "must include the anthropic-workspace-id header".
+3. **Storage rules yang membaca Firestore butuh role `roles/firebaserules.firestoreServiceAgent`** untuk `service-690382694776@gcp-sa-firebasestorage.iam.gserviceaccount.com`. Role ini sudah dipasang.
+4. **Function yang gagal saat dibuat lalu berhasil di-update bisa kehilangan izin invoker `allUsers`.** Gejalanya: CORS error / 403 di browser. Callable sekarang menyatakan `invoker: "public"`. Untuk function yang sudah terlanjur rusak, pasang izinnya dengan `gcloud functions add-invoker-policy-binding <nama> --region=asia-southeast2 --member=allUsers`.
+5. **Deploy pertama bisa gagal karena repositori `gcf-artifacts` belum siap.** Cukup ulangi deploy untuk function yang gagal. Kebijakan pembersihan image (>1 hari) sudah dipasang.
+
+### Riwayat prasyarat (sebelum live)
 Status pengecekan 15 Oktober 2026 (lewat Firebase CLI dan gcloud dengan akun pemilik project):
 
 | Prasyarat | Status |

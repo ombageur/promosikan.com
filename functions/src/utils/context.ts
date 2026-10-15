@@ -15,6 +15,9 @@ export type CallContext = {
  */
 export const callableOptions: CallableOptions = {
   enforceAppCheck: process.env.ENFORCE_APP_CHECK === "true",
+  // Callable dipanggil langsung dari browser; akses dijaga requireAuth + requirePermission di handler.
+  // Dinyatakan eksplisit agar setiap deploy (termasuk update) memasang izin invoker Cloud Run.
+  invoker: "public",
 };
 
 export function requireAuth(request: Pick<CallableRequest, "auth">): CallContext {

@@ -16,7 +16,7 @@ Platform AI multi-tenant untuk customer discovery dan smart promotion: menemukan
 | 1 — Auth, Workspace & RBAC | ✅ selesai |
 | 2 — App Shell, Katalog & Demo Mode | ✅ selesai |
 | 3 — AI Intelligence | ✅ selesai |
-| 4 — Integrasi Threads | ✅ kode & tes; ⏳ belum live — lihat [docs/DEPLOY.md](docs/DEPLOY.md) |
+| 4 — Integrasi Threads | ✅ live di https://promosikan.com (menghubungkan akun Threads menunggu login Meta) |
 
 Yang sudah berfungsi:
 
