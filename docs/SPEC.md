@@ -586,7 +586,7 @@ promosikan.com/
 - **Tiga project Firebase terpisah:** `promosikan-dev` (emulator dan uji coba), `promosikan-staging`, dan `promosikan-prod`, dengan alias di `.firebaserc`.
 - Konfigurasi frontend memakai `.env.development`, `.env.staging`, dan `.env.production`. Isinya hanya konfigurasi web Firebase yang memang publik.
 - Secret per project ada di Secret Manager: `ANTHROPIC_API_KEY`, `THREADS_APP_ID`, `THREADS_APP_SECRET`, dan `TOKEN_ENCRYPTION_KEY`.
-- Hosting: output Vite `dist/`, dengan rewrite `** → /index.html` untuk SPA. Tambahkan juga rewrite `/oauth/threads/callback` ke function.
+- Hosting: output Vite `dist/`, dengan rewrite `** → /index.html` untuk SPA. Tambahkan juga rewrite `/api/integrations/threads/callback` ke function.
 - CI (GitHub Actions): lint, typecheck, unit test, tes rules di emulator, dan build. Deploy ke staging dari `main`. Deploy ke production melalui tag atau persetujuan manual.
 - Monitoring: Cloud Logging, error alert untuk function yang gagal, dan budget alert di GCP serta Anthropic Console (batas pengeluaran workspace API).
 

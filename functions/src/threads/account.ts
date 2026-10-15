@@ -7,7 +7,7 @@ export type ThreadsConfig = {
   appId: string;
   appSecret: string;
   encryptionKey: string;
-  /** URL frontend, mis. https://promosikan.com — redirect OAuth = `${appUrl}/oauth/threads/callback`. */
+  /** URL frontend, mis. https://promosikan.com — redirect OAuth = `${appUrl}/api/integrations/threads/callback`. */
   appUrl: string;
 };
 
@@ -15,7 +15,7 @@ export type ThreadsDeps = { db: Firestore; api: ThreadsApi; config: ThreadsConfi
 
 export type AccountStatus = "connected" | "expired" | "revoked" | "error";
 
-export const redirectUri = (config: ThreadsConfig) => `${config.appUrl.replace(/\/$/, "")}/oauth/threads/callback`;
+export const redirectUri = (config: ThreadsConfig) => `${config.appUrl.replace(/\/$/, "")}/api/integrations/threads/callback`;
 
 /** Satu akun Threads per workspace. Dokumen ini dibaca client — tidak pernah berisi token. */
 export const accountRef = (db: Firestore, workspaceId: string) =>

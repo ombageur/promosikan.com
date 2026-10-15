@@ -87,7 +87,7 @@ Sumber: [Long-lived tokens](https://developers.facebook.com/docs/threads/get-sta
   - Kebijakan Privasi: `/privacy` (sudah ada di aplikasi)
   - Syarat Layanan: `/terms` (sudah ada)
   - Instruksi penghapusan data: `/privacy#hapus-data`
-- [ ] Siapkan domain produksi dan redirect URI OAuth: `https://<domain>/oauth/threads/callback`.
+- [ ] Siapkan domain produksi dan redirect URI OAuth: `https://<domain>/api/integrations/threads/callback`.
 - [ ] Tinjau isi Kebijakan Privasi dan Syarat Layanan (bersama penasihat hukum bila perlu). Pastikan alamat `privacy@promosikan.com` benar-benar aktif.
 - [ ] Siapkan screencast alur nyata untuk setiap izin. Contoh: hubungkan akun → keyword → hasil pencarian → draft → approval manual → balasan terkirim.
 - [ ] Siapkan deskripsi penggunaan data yang konsisten dengan Kebijakan Privasi: tanpa scraping, tanpa auto-reply, ada approval manusia, ada retensi terbatas.

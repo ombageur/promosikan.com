@@ -76,9 +76,9 @@ Catatan:
 
 1. developers.facebook.com → Create App → use case **Access the Threads API**.
 2. Isi URL berikut di pengaturan Threads app:
-   - Redirect callback: `https://promosikan.com/oauth/threads/callback`
-   - Uninstall callback: `https://promosikan.com/api/threads/deauthorize`
-   - Delete callback: `https://promosikan.com/api/threads/data-deletion`
+   - Redirect callback: `https://promosikan.com/api/integrations/threads/callback`
+   - Uninstall callback: `https://promosikan.com/api/integrations/threads/deauthorize`
+   - Delete callback: `https://promosikan.com/api/integrations/threads/data-deletion`
    - Privacy policy: `https://promosikan.com/privacy`
    - Terms: `https://promosikan.com/terms`
 3. Tambahkan akun Threads Anda sebagai **tester** (Roles → Threads Testers) dan terima undangannya di Threads.
@@ -98,6 +98,6 @@ Catatan:
 
 ## Verifikasi setelah deploy
 
-- `https://promosikan-com.web.app` terbuka. Daftar akun baru → email verifikasi terkirim → onboarding → buat workspace.
+- `https://promosikan.com` terbuka (dan `promosikan-com.web.app` dialihkan ke sana). Daftar akun baru → email verifikasi terkirim → onboarding → buat workspace.
 - Analisis Manual mengembalikan skor dari Claude sungguhan, dan Integrations menampilkan pemakaian AI bertambah.
 - Log: `npx firebase functions:log --only analyzeConversation`.

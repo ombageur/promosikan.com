@@ -11,21 +11,21 @@
     ],
     "rewrites": [
       {
-        "source": "/oauth/threads/callback",
+        "source": "/api/integrations/threads/callback",
         "function": {
           "functionId": "threadsOAuthCallback",
           "region": "asia-southeast2"
         }
       },
       {
-        "source": "/api/threads/deauthorize",
+        "source": "/api/integrations/threads/deauthorize",
         "function": {
           "functionId": "threadsDeauthorize",
           "region": "asia-southeast2"
         }
       },
       {
-        "source": "/api/threads/data-deletion",
+        "source": "/api/integrations/threads/data-deletion",
         "function": {
           "functionId": "threadsDataDeletion",
           "region": "asia-southeast2"

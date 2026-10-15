@@ -141,7 +141,7 @@ describe("OAuth Threads", () => {
     const { url } = await startThreadsOAuthHandler(deps(), alice, { workspaceId });
     const parsed = new URL(url);
     expect(parsed.searchParams.get("scope")).toBe("threads_basic,threads_keyword_search");
-    expect(parsed.searchParams.get("redirect_uri")).toBe("https://promosikan.test/oauth/threads/callback");
+    expect(parsed.searchParams.get("redirect_uri")).toBe("https://promosikan.test/api/integrations/threads/callback");
     const state = parsed.searchParams.get("state")!;
 
     const redirect = await threadsOAuthCallbackHandler(deps(), { code: "abc#_", state });

@@ -86,19 +86,19 @@ export const disconnectThreads = onCall({ ...callableOptions, secrets: threadsSe
   disconnectThreadsHandler(threadsDeps(), requireAuth(req), req.data),
 );
 
-/** Redirect OAuth (Hosting: /oauth/threads/callback → function ini). */
+/** Redirect OAuth (Hosting: /api/integrations/threads/callback → function ini). */
 export const threadsOAuthCallback = onRequest({ secrets: threadsSecrets }, async (req, res) => {
   res.redirect(302, await threadsOAuthCallbackHandler(threadsDeps(), req.query as Record<string, unknown>));
 });
 
-/** Callback Meta saat pengguna mencabut akses aplikasi (Hosting: /api/threads/deauthorize). */
+/** Callback Meta saat pengguna mencabut akses aplikasi (Hosting: /api/integrations/threads/deauthorize). */
 export const threadsDeauthorize = onRequest({ secrets: threadsSecrets }, async (req, res) => {
   if (req.method !== "POST") return void res.status(405).end();
   const result = await threadsDeauthorizeHandler(threadsDeps(), (req.body ?? {}) as Record<string, unknown>);
   res.status(result.status).json(result.body);
 });
 
-/** Callback Meta permintaan penghapusan data (Hosting: /api/threads/data-deletion). */
+/** Callback Meta permintaan penghapusan data (Hosting: /api/integrations/threads/data-deletion). */
 export const threadsDataDeletion = onRequest({ secrets: threadsSecrets }, async (req, res) => {
   if (req.method !== "POST") return void res.status(405).end();
   const result = await threadsDataDeletionHandler(threadsDeps(), (req.body ?? {}) as Record<string, unknown>);
