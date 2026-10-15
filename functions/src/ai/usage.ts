@@ -4,6 +4,9 @@ import { AI_CALLS_PER_USER_PER_MINUTE, planLimits } from "@shared/plans";
 import type { LlmUsage } from "./llm";
 import { estimateCostUsd } from "./pricing";
 
+/** Pemanggil untuk pekerjaan latar (monitoring): tunduk pada kuota bulanan, bukan rate limit per pengguna. */
+export const SYSTEM_UID = "system";
+
 const monthKey = (now: Date) => `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
 
 /**
@@ -25,7 +28,7 @@ export async function reserveAiCall(db: Firestore, workspaceId: string, uid: str
     }
     const sameMinute = rate.get("minute") === minute;
     const count = sameMinute ? Number(rate.get("count") ?? 0) : 0;
-    if (count >= AI_CALLS_PER_USER_PER_MINUTE) {
+    if (uid !== SYSTEM_UID && count >= AI_CALLS_PER_USER_PER_MINUTE) {
       throw new HttpsError("resource-exhausted", "Terlalu banyak permintaan AI. Tunggu sebentar lalu coba lagi.");
     }
     tx.set(monthRef, { month: monthKey(now), aiCalls: FieldValue.increment(1), updatedAt: FieldValue.serverTimestamp() }, { merge: true });

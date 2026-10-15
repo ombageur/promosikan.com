@@ -156,11 +156,17 @@ Spesifikasi lengkap ada di [SPEC.md](SPEC.md). Setiap fase punya tujuan, cakupan
 - Penanganan kuota dan rate limit Threads, `monitoringRuns`, dan TTL `expiresAt`.
 - Halaman Integrations (status koneksi, scope, waktu sinkron terakhir, tombol putuskan) dan Discover (feed post nyata dengan filter).
 
-**DoD:**
-- [ ] Menjalankan sinkron dua kali tidak menghasilkan post atau analisis duplikat (dibuktikan dengan tes integrasi di emulator).
-- [ ] Token tidak pernah muncul di dokumen yang bisa dibaca client, juga tidak di log.
-- [ ] Token yang kedaluwarsa atau dicabut tampil sebagai status yang jelas dan menghentikan monitoring workspace tersebut.
-- [ ] Workspace demo tidak pernah memanggil Threads.
+**DoD:** kode & tes ✅ (2026-10-15, branch `phase-4-threads`); **belum live** — menunggu deploy & Meta Developer App (lihat [DEPLOY.md](DEPLOY.md)).
+- [x] Menjalankan sinkron dua kali tidak menghasilkan post atau analisis duplikat (dibuktikan dengan tes integrasi di emulator). — `functions/src/threads/threads.test.ts` ("sinkron dua kali…", "analisis post idempoten…")
+- [x] Token tidak pernah muncul di dokumen yang bisa dibaca client, juga tidak di log. — token AES-256-GCM di `integrationSecrets` (rules: ditolak penuh, `tests/rules/threads.test.ts`); tes memastikan dokumen akun tidak memuat token; log hanya mencatat pesan galat
+- [x] Token yang kedaluwarsa atau dicabut tampil sebagai status yang jelas dan menghentikan monitoring workspace tersebut. — tes refresh/sinkron/deauthorize → status `expired`/`revoked`, scheduler melewati akun tersebut; kartu Threads di Integrations menampilkan status & tombol hubungkan ulang
+- [x] Workspace demo tidak pernah memanggil Threads. — `startThreadsOAuth` menolak demo; scheduler & sinkron melewati `isDemo`
+
+**Catatan Fase 4:**
+- Verifikasi live belum dilakukan: project produksi belum punya login Email/Password, bucket Storage, secret, dan Meta Developer App. Perubahan pada project produksi menunggu persetujuan pemilik (runbook: [DEPLOY.md](DEPLOY.md)).
+- Callback deauthorize & penghapusan data memakai format `signed_request` standar Meta; format untuk aplikasi Threads belum terdokumentasi resmi — verifikasi di App Dashboard.
+- Analisis hasil monitoring memakai task queue per post (idempoten). Optimasi Message Batches API (−50% biaya) ditunda sampai volume nyata terukur.
+- Mode AI tiruan di emulator dihapus atas permintaan pemilik produk; tes otomatis tetap memakai klien tiruan (mock) agar kasus gagal bisa diuji tanpa biaya.
 
 ---
 

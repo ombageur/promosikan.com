@@ -5,7 +5,6 @@ import { narrowCatalog } from "./context";
 import { estimateCostUsd } from "./pricing";
 import { untrusted } from "./prompts/common";
 import { localReplyIssues } from "./reply";
-import { isFakeAiEnabled } from "./fakeLlm";
 
 const profile = workspaceProfileSchema.parse({
   name: "Publish",
@@ -58,13 +57,5 @@ describe("estimateCostUsd", () => {
 
   it("model tak dikenal ditandai", () => {
     expect(estimateCostUsd({ model: "claude-baru", inputTokens: 1, outputTokens: 1, cacheCreationTokens: 0, cacheReadTokens: 0 }).known).toBe(false);
-  });
-});
-
-describe("isFakeAiEnabled", () => {
-  it("hanya aktif di emulator dengan AI_FAKE=true", () => {
-    expect(isFakeAiEnabled({ AI_FAKE: "true" })).toBe(false);
-    expect(isFakeAiEnabled({ FUNCTIONS_EMULATOR: "true" })).toBe(false);
-    expect(isFakeAiEnabled({ FUNCTIONS_EMULATOR: "true", AI_FAKE: "true" })).toBe(true);
   });
 });

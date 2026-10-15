@@ -8,7 +8,9 @@ export type AuditAction =
   | "member.role_changed"
   | "member.removed"
   | "member.left"
-  | "ownership.transferred";
+  | "ownership.transferred"
+  | "integration.connected"
+  | "integration.disconnected";
 
 export type AuditEntry = {
   action: AuditAction;

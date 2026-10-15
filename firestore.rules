@@ -193,6 +193,23 @@ service cloud.firestore {
         allow create, delete: if false;
       }
 
+      // ---------- Integrasi sosial (Fase 4): hanya backend yang menulis ----------
+      // socialAccounts berisi metadata koneksi saja — token ada di integrationSecrets (ditolak penuh).
+      match /socialAccounts/{accountId} {
+        allow read: if can(wid, 'workspace.read');
+        allow write: if false;
+      }
+
+      match /socialPosts/{postId} {
+        allow read: if can(wid, 'workspace.read');
+        allow write: if false;
+      }
+
+      match /monitoringRuns/{runId} {
+        allow read: if can(wid, 'workspace.read');
+        allow write: if false;
+      }
+
       // Kuota & biaya AI: hanya backend yang menulis; Owner/Admin bisa melihat.
       match /usage/{usageId} {
         allow read: if can(wid, 'audit.read');
@@ -281,6 +298,17 @@ service cloud.firestore {
         || can(resource.data.workspaceId, 'members.manage')
       );
       allow write: if false;
+    }
+
+    // Token OAuth terenkripsi, state OAuth, dan catatan penghapusan data — tidak pernah untuk client.
+    match /integrationSecrets/{secretId} {
+      allow read, write: if false;
+    }
+    match /oauthStates/{state} {
+      allow read, write: if false;
+    }
+    match /dataDeletionRequests/{code} {
+      allow read, write: if false;
     }
 
     // Antrean email (Firebase Extension "Trigger Email") — backend-only.

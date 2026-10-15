@@ -16,7 +16,7 @@ Platform AI multi-tenant untuk customer discovery dan smart promotion: menemukan
 | 1 — Auth, Workspace & RBAC | ✅ selesai |
 | 2 — App Shell, Katalog & Demo Mode | ✅ selesai |
 | 3 — AI Intelligence | ✅ selesai |
-| 4 — Integrasi Threads | berikutnya (butuh App Review Meta) |
+| 4 — Integrasi Threads | ✅ kode & tes; ⏳ belum live — lihat [docs/DEPLOY.md](docs/DEPLOY.md) |
 
 Yang sudah berfungsi:
 
@@ -48,7 +48,7 @@ npm run dev                  # di terminal lain → http://localhost:5173
 
 ### AI saat pengembangan lokal
 
-Tanpa API key, buat `functions/.env.local` berisi `AI_FAKE=true` dan `functions/.secret.local` berisi `ANTHROPIC_API_KEY=fake` (keduanya diabaikan git). Functions emulator lalu memakai **AI tiruan** deterministik — hanya aktif di emulator, tidak pernah di produksi. Untuk memakai Claude sungguhan di emulator, hapus `AI_FAKE` dan isi key asli di `functions/.secret.local`.
+Tidak ada mode AI tiruan: Analisis Manual dan draft balasan di emulator memanggil Claude sungguhan. Isi `functions/.secret.local` (diabaikan git) dengan `ANTHROPIC_API_KEY=…`, `THREADS_APP_SECRET=…`, dan `TOKEN_ENCRYPTION_KEY=<32 byte base64>`. Tes otomatis tetap memakai klien tiruan agar gratis dan bisa menguji kasus gagal.
 
 Eval kualitas analisis (memanggil Claude sungguhan, berbayar): `npm run eval:ai -- --yes`. Key dibaca dari env `ANTHROPIC_API_KEY` atau dari `functions/.secret.local` (key `fake…` dilewati). Tanpa `--yes` hanya menampilkan rencana & estimasi biaya.
 
@@ -95,6 +95,8 @@ docs/       SPEC, ROADMAP
 5. Opsional: pasang Firebase Extension **Trigger Email** (koleksi `mail`) agar undangan terkirim lewat email.
 
 ## Deploy
+
+Runbook lengkap & status prasyarat produksi: [docs/DEPLOY.md](docs/DEPLOY.md).
 
 ```bash
 npx firebase use default                 # promosikan-com
