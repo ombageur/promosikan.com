@@ -616,4 +616,4 @@ Perlu diputuskan pemilik produk sebelum fase terkait dimulai:
 | 4 | Domain produksi dan email pengirim | 1 |
 | 5 | Region Firebase/Functions final (`asia-southeast2` vs `asia-southeast1`) | 0 |
 | 6 | Platform sosial berikutnya setelah Threads | setelah 8 |
-| 7 | Model Claude per rute: tetap `claude-opus-5-5` di semua rute, atau model lebih murah (mis. Claude Haiku 5.5) untuk prefilter/analisis — diputuskan dari hasil eval Fase 3 | 3 |
+| 7 | Model Claude per rute: tetap `claude-opus-5-5` di semua rute, atau model lebih murah (mis. Claude Haiku 5.5) untuk prefilter/analisis. Data eval Fase 3: Opus 5.5 effort low → akurasi 94–100%, ±US$0,012 per analisis. Bandingkan dengan `CLAUDE_MODEL=claude-haiku-5-5 npm run eval:ai -- --yes` sebelum memutuskan | 3–4 |

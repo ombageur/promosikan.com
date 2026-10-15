@@ -115,10 +115,22 @@ Spesifikasi lengkap ada di [SPEC.md](SPEC.md). Setiap fase punya tujuan, cakupan
 - Halaman Kebijakan Privasi dan Syarat Layanan (dibutuhkan untuk App Review Meta).
 - **Mulai pengajuan App Review Meta.** Sebelum itu, tulis `docs/THREADS_API_NOTES.md` dari dokumentasi resmi.
 
-**DoD:** 4 dari 5 terpenuhi (2026-10-15, branch `phase-3-ai`); eval belum dijalankan terhadap Claude sungguhan.
+**DoD:** ✅ selesai 2026-10-15 (branch `phase-3-ai`)
 - [x] Output AI yang tidak valid menurut Zod ditolak dan dicatat, tanpa membuat aplikasi crash. — `runAi` + tes "output tidak valid/tidak lengkap" di `functions/src/ai/ai.test.ts`
 - [x] Ada tes unit dengan klien Claude tiruan (mock) untuk parsing, skor, kasus "tidak ada yang cocok", dan kegagalan API. — `ai.test.ts` (16 tes) + `units.test.ts`
-- [ ] Ada set evaluasi berisi ≥ 30 contoh post berbahasa Indonesia (dengan label yang diharapkan), dan skrip `npm run eval:ai` melaporkan akurasi klasifikasi. — **dataset (32 kasus) & skrip selesai; belum dijalankan** karena belum ada `ANTHROPIC_API_KEY` di lingkungan pengembangan. Jalankan: `ANTHROPIC_API_KEY=… npm run eval:ai -- --yes` (perkiraan < US$1).
+- [x] Ada set evaluasi berisi ≥ 30 contoh post berbahasa Indonesia (dengan label yang diharapkan), dan skrip `npm run eval:ai` melaporkan akurasi klasifikasi. — 32 kasus di `functions/eval/dataset.ts`. Hasil 2026-10-15 (`claude-opus-5-5`, effort low, prompt `analyze-v1`):
+
+  | Metrik | Hasil |
+  |---|---|
+  | Intent benar | 30/32 (94%) |
+  | Niat beli benar | 32/32 (100%) |
+  | Match teratas benar | 30/32 (94%) |
+  | Sensitif benar | 31/32 (97%); recall sensitif 3/3 |
+  | Ditolak / tidak valid | 0 / 0 |
+  | Biaya total | ±US$0,39 (±US$0,012 per analisis) |
+  | Latensi rata-rata | ±5,7 detik |
+
+  Yang meleset sebagian besar karena label ambigu: e16 & e18 punya dua layanan yang sama-sama masuk akal, e10 & e29 berbeda tipis di intent, dan e31 ("jual follower murah") ditandai sensitif oleh AI — lebih konservatif dari label.
 - [x] Kuota habis menghasilkan pesan yang jelas, dan tidak ada panggilan Claude API yang terjadi. — tes kuota & rate limit memastikan klien tiruan tidak dipanggil
 - [x] Tidak ada secret di bundle frontend (diverifikasi dengan grep pada `dist/`). — grep `sk-ant|ANTHROPIC_API_KEY|anthropic-ai|client_secret|THREADS_APP_SECRET`: kosong
 

@@ -15,7 +15,7 @@ Platform AI multi-tenant untuk customer discovery dan smart promotion: menemukan
 | 0 — Migrasi & Fondasi | ✅ selesai |
 | 1 — Auth, Workspace & RBAC | ✅ selesai |
 | 2 — App Shell, Katalog & Demo Mode | ✅ selesai |
-| 3 — AI Intelligence | ✅ selesai (eval belum dijalankan dengan API key) |
+| 3 — AI Intelligence | ✅ selesai |
 | 4 — Integrasi Threads | berikutnya (butuh App Review Meta) |
 
 Yang sudah berfungsi:
@@ -50,7 +50,7 @@ npm run dev                  # di terminal lain → http://localhost:5173
 
 Tanpa API key, buat `functions/.env.local` berisi `AI_FAKE=true` dan `functions/.secret.local` berisi `ANTHROPIC_API_KEY=fake` (keduanya diabaikan git). Functions emulator lalu memakai **AI tiruan** deterministik — hanya aktif di emulator, tidak pernah di produksi. Untuk memakai Claude sungguhan di emulator, hapus `AI_FAKE` dan isi key asli di `functions/.secret.local`.
 
-Eval kualitas analisis (memanggil Claude sungguhan, berbayar): `ANTHROPIC_API_KEY=… npm run eval:ai -- --yes`. Tanpa `--yes` hanya menampilkan rencana & estimasi biaya.
+Eval kualitas analisis (memanggil Claude sungguhan, berbayar): `npm run eval:ai -- --yes`. Key dibaca dari env `ANTHROPIC_API_KEY` atau dari `functions/.secret.local` (key `fake…` dilewati). Tanpa `--yes` hanya menampilkan rencana & estimasi biaya.
 
 Dengan `VITE_USE_EMULATORS=true`, aplikasi memakai project emulator `demo-promosikan` dan tidak menyentuh project cloud. Link verifikasi email dan reset kata sandi di emulator tidak dikirim ke inbox — buka di log terminal emulator atau di Emulator UI (tab Authentication). Login Google di emulator memakai akun tiruan. Untuk menyambung ke project nyata `promosikan-com`, isi variabel `VITE_FIREBASE_*` dari Firebase Console dan set `VITE_USE_EMULATORS=false`.
 
