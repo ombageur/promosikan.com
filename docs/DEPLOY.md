@@ -13,7 +13,7 @@ Status pengecekan 15 Oktober 2026 (lewat Firebase CLI dan gcloud dengan akun pem
 | **Bucket Storage** | ❌ belum ada — langkah 2 |
 | **Secret di Secret Manager** | ❌ belum ada — langkah 3 |
 | **Meta Developer App (Threads)** | ❌ belum ada — langkah 6 |
-| Domain `promosikan.com` | ⚠️ masih halaman parkir Hostinger; aplikasi live di `https://promosikan-com.web.app` |
+| Domain `promosikan.com` | ✅ domain utama (Hosting aktif, kepemilikan terverifikasi; SSL sedang diterbitkan). `promosikan-com.web.app` & `promosikan-com.firebaseapp.com` dialihkan ke sini oleh `index.html` |
 
 ## 1. Aktifkan login Email/Password
 Firebase Console → Authentication → Sign-in method → **Email/Password** → Enable (tanpa "Email link").
@@ -48,7 +48,7 @@ Setelah itu, atur **batas pengeluaran** di Anthropic Console (Settings → Limit
 
 - `.env.production.local`: konfigurasi web Firebase + `VITE_USE_EMULATORS=false`. Dipakai `npm run build`.
 - `functions/.env.promosikan-com`:
-  - `APP_URL=https://promosikan-com.web.app`
+  - `APP_URL=https://promosikan.com`
   - `CLAUDE_MODEL=claude-opus-5-5`
   - `ENFORCE_APP_CHECK=false`
   - `THREADS_APP_ID=` (diisi di langkah 6)
@@ -76,11 +76,11 @@ Catatan:
 
 1. developers.facebook.com → Create App → use case **Access the Threads API**.
 2. Isi URL berikut di pengaturan Threads app:
-   - Redirect callback: `https://promosikan-com.web.app/oauth/threads/callback`
-   - Uninstall callback: `https://promosikan-com.web.app/api/threads/deauthorize`
-   - Delete callback: `https://promosikan-com.web.app/api/threads/data-deletion`
-   - Privacy policy: `https://promosikan-com.web.app/privacy`
-   - Terms: `https://promosikan-com.web.app/terms`
+   - Redirect callback: `https://promosikan.com/oauth/threads/callback`
+   - Uninstall callback: `https://promosikan.com/api/threads/deauthorize`
+   - Delete callback: `https://promosikan.com/api/threads/data-deletion`
+   - Privacy policy: `https://promosikan.com/privacy`
+   - Terms: `https://promosikan.com/terms`
 3. Tambahkan akun Threads Anda sebagai **tester** (Roles → Threads Testers) dan terima undangannya di Threads.
 4. Masukkan **Threads App ID** ke `functions/.env.promosikan-com` (`THREADS_APP_ID=…`), lalu simpan **Threads App Secret** dengan perintah `secrets:set THREADS_APP_SECRET` di langkah 3.
 5. Deploy function Threads:
@@ -90,14 +90,11 @@ Catatan:
    ```
 6. Uji: buka Integrations → **Hubungkan Threads**. Sampai `threads_keyword_search` disetujui lewat App Review, pencarian hanya menemukan post milik akun Anda sendiri.
 
-## 7. Domain `promosikan.com` (opsional)
+## 7. Domain
 
-1. Firebase Console → Hosting → Add custom domain → `promosikan.com`.
-2. Tambahkan record DNS yang diberikan Firebase di panel DNS Hostinger.
-3. Setelah aktif:
-   - ubah `APP_URL` di `functions/.env.promosikan-com` menjadi `https://promosikan.com`;
-   - deploy ulang functions;
-   - perbarui ketiga URL callback di Meta.
+- `promosikan.com` adalah domain utama (`APP_URL`). URL callback Meta di langkah 6 memakai domain ini.
+- `promosikan-com.web.app` dan `promosikan-com.firebaseapp.com` dialihkan ke `promosikan.com` lewat skrip di `index.html` (path & query dipertahankan). Jalur `/__/auth/…` milik Firebase (login Google, verifikasi email) tidak terpengaruh.
+- `www.promosikan.com`: Firebase Console → Hosting → **Add custom domain** → `www.promosikan.com` → centang **Redirect to an existing website** → `promosikan.com`. Lalu tambahkan record DNS yang ditampilkan di panel DNS Hostinger.
 
 ## Verifikasi setelah deploy
 

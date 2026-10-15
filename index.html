@@ -6,6 +6,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Platform customer discovery dan smart promotion untuk bisnis Indonesia." />
     <meta name="theme-color" content="#2563EB" />
+    <script>
+      // Domain utama: promosikan.com. Domain bawaan Firebase dialihkan dengan path yang sama.
+      if (/\.(web\.app|firebaseapp\.com)$/.test(location.hostname)) {
+        location.replace("https://promosikan.com" + location.pathname + location.search + location.hash);
+      }
+    </script>
     <title>Promosikan.com — Temukan yang Butuh. Tawarkan yang Tepat.</title>
   </head>
   <body>
