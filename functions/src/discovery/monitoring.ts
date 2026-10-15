@@ -1,7 +1,11 @@
 import { FieldValue, type Firestore, Timestamp } from "firebase-admin/firestore";
 import { logger } from "firebase-functions";
 import { automationSettingsSchema, DEFAULT_AUTOMATION_SETTINGS } from "@shared/schemas/automation";
+import { HttpsError } from "firebase-functions/v2/https";
+import { z } from "zod";
 import { accountRef, loadToken, setAccountStatus, type ThreadsDeps } from "../threads/account";
+import { type CallContext, parseInput } from "../utils/context";
+import { requirePermission } from "../utils/membership";
 import { type ThreadsPost, ThreadsApiError, ThreadsAuthError, ThreadsRateLimitError } from "../threads/api";
 import { RETENTION_DAYS } from "./analyzePost";
 
@@ -15,6 +19,10 @@ const DAY_MS = 24 * 60 * MINUTE;
 export const DAILY_QUERY_BUDGET = 1500;
 export const MAX_KEYWORDS_PER_RUN = 100;
 export const MIN_POST_CHARS = 15;
+/** Interval scheduledSocialMonitoring (functions/src/index.ts). */
+export const SCHEDULER_MINUTES = 15;
+/** Jarak minimal antar sinkron manual per workspace. */
+export const MANUAL_SYNC_COOLDOWN_MINUTES = 5;
 /** Batas bawah `since` dari dokumentasi keyword search. */
 const SEARCH_EPOCH = 1688540400;
 
@@ -46,9 +54,10 @@ export async function scheduledMonitoringHandler(deps: { db: Firestore; enqueue:
     if (!workspace) continue;
     const ws = await workspace.get();
     const { enabled, minutes } = await intervalMinutes(deps.db, workspace.id);
-    // Workspace demo tidak pernah memanggil Threads; monitoring nonaktif dicek lagi 1 jam kemudian.
+    // Workspace demo tidak pernah memanggil Threads; monitoring nonaktif dicek lagi di putaran scheduler
+    // berikutnya, sehingga sinkron pertama berjalan ≤ 15 menit setelah monitoring diaktifkan.
     const skip = ws.get("isDemo") === true || !enabled;
-    await account.ref.update({ nextSyncAt: Timestamp.fromMillis(now + (skip ? 60 : minutes) * MINUTE) });
+    await account.ref.update({ nextSyncAt: Timestamp.fromMillis(now + (skip ? SCHEDULER_MINUTES : minutes) * MINUTE) });
     if (skip) continue;
     await deps.enqueue("syncWorkspaceKeywords", { workspaceId: workspace.id });
     enqueued++;
@@ -118,9 +127,9 @@ export async function syncWorkspaceKeywordsHandler(deps: ThreadsDeps & { enqueue
   }
 
   // Prefilter murah sebelum AI (SPEC §8): teks terlalu pendek & post milik akun sendiri dibuang.
-  const candidates = [...found.values()].filter(
-    ({ post }) => (post.text ?? "").trim().length >= MIN_POST_CHARS && (post.username ?? "").toLowerCase() !== ownUsername,
-  );
+  const isOwn = ({ post }: Found) => (post.username ?? "").toLowerCase() === ownUsername;
+  const ownPostsSkipped = [...found.values()].filter(isOwn).length;
+  const candidates = [...found.values()].filter((f) => (f.post.text ?? "").trim().length >= MIN_POST_CHARS && !isOwn(f));
 
   let created = 0;
   for (const { post, keywords } of candidates) {
@@ -160,11 +169,39 @@ export async function syncWorkspaceKeywordsHandler(deps: ThreadsDeps & { enqueue
     keywordsQueried: queried,
     postsFound: found.size,
     postsNew: created,
+    ownPostsSkipped,
     stopReason,
     errors: errors.slice(0, 10),
     quotaUsedToday: used,
     expiresAt: Timestamp.fromMillis(now + 30 * DAY_MS),
   });
   if (errors.length > 0) logger.warn("Sinkron Threads selesai dengan galat", { workspaceId, errors: errors.length });
-  return { queried, found: found.size, created, stopReason };
+  return { queried, found: found.size, created, ownPostsSkipped, stopReason };
+}
+
+/**
+ * "Sinkron sekarang" (Owner/Admin): kirim sinkron ke antrean tanpa menunggu jadwal, juga saat monitoring
+ * terjadwal nonaktif. Dibatasi sekali per 5 menit per workspace agar kuota Threads aman.
+ */
+export async function syncThreadsNowHandler(deps: { db: Firestore; enqueue: Enqueue; now?: () => number }, ctx: CallContext, data: unknown) {
+  const { workspaceId } = parseInput(z.object({ workspaceId: z.string().min(1).max(128) }), data);
+  await requirePermission(deps.db, workspaceId, ctx.uid, "integrations.manage");
+  const now = deps.now?.() ?? Date.now();
+  const ref = accountRef(deps.db, workspaceId);
+
+  await deps.db.runTransaction(async (tx) => {
+    const [workspace, account] = await Promise.all([tx.get(deps.db.collection("workspaces").doc(workspaceId)), tx.get(ref)]);
+    if (workspace.get("isDemo") === true) throw new HttpsError("failed-precondition", "Workspace demo tidak terhubung ke platform sosial.");
+    if (!account.exists || account.get("status") !== "connected") {
+      throw new HttpsError("failed-precondition", "Akun Threads belum terhubung atau perlu dihubungkan ulang.");
+    }
+    const last = (account.get("lastManualSyncAt") as Timestamp | undefined)?.toMillis() ?? 0;
+    const waitMs = last + MANUAL_SYNC_COOLDOWN_MINUTES * MINUTE - now;
+    if (waitMs > 0) {
+      throw new HttpsError("resource-exhausted", `Sinkron manual baru saja dijalankan. Coba lagi dalam ${Math.ceil(waitMs / MINUTE)} menit.`);
+    }
+    tx.update(ref, { lastManualSyncAt: Timestamp.fromMillis(now) });
+  });
+  await deps.enqueue("syncWorkspaceKeywords", { workspaceId });
+  return { queued: true };
 }

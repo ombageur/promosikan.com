@@ -18,12 +18,14 @@ export type MonitoringRun = {
   keywordsQueried: number;
   postsFound: number;
   postsNew: number;
+  ownPostsSkipped?: number;
   stopReason: string | null;
   errors: string[];
 };
 
 export const startThreadsOAuth = callable<{ workspaceId: string }, { url: string }>("startThreadsOAuth");
 export const disconnectThreads = callable<{ workspaceId: string }, { ok: true }>("disconnectThreads");
+export const syncThreadsNow = callable<{ workspaceId: string }, { queued: true }>("syncThreadsNow");
 
 export async function getThreadsAccount(workspaceId: string): Promise<ThreadsAccount | null> {
   const snap = await getDoc(doc(db, "workspaces", workspaceId, "socialAccounts", "threads"));

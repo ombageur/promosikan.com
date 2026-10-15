@@ -7,7 +7,7 @@ import { onTaskDispatched } from "firebase-functions/v2/tasks";
 import { analyzeConversationHandler } from "./ai/analyze";
 import { claudeClient } from "./ai/llm";
 import { analyzePostHandler } from "./discovery/analyzePost";
-import { type Enqueue, scheduledMonitoringHandler, syncWorkspaceKeywordsHandler } from "./discovery/monitoring";
+import { type Enqueue, scheduledMonitoringHandler, syncThreadsNowHandler, syncWorkspaceKeywordsHandler } from "./discovery/monitoring";
 import { threadsApi } from "./threads/api";
 import {
   disconnectThreadsHandler,
@@ -85,6 +85,8 @@ export const startThreadsOAuth = onCall({ ...callableOptions, secrets: threadsSe
 export const disconnectThreads = onCall({ ...callableOptions, secrets: threadsSecrets }, (req) =>
   disconnectThreadsHandler(threadsDeps(), requireAuth(req), req.data),
 );
+
+export const syncThreadsNow = onCall(callableOptions, (req) => syncThreadsNowHandler({ db, enqueue }, requireAuth(req), req.data));
 
 /** Redirect OAuth (Hosting: /api/integrations/threads/callback → function ini). */
 export const threadsOAuthCallback = onRequest({ secrets: threadsSecrets }, async (req, res) => {

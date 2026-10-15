@@ -7,7 +7,7 @@ import { offeringSchema } from "@shared/schemas/catalog";
 import { DEFAULT_AUTOMATION_SETTINGS } from "@shared/schemas/automation";
 import type { LlmClient, LlmRequest, LlmResult } from "../ai/llm";
 import { analyzePostHandler } from "../discovery/analyzePost";
-import { DAILY_QUERY_BUDGET, type Enqueue, scheduledMonitoringHandler, syncWorkspaceKeywordsHandler } from "../discovery/monitoring";
+import { DAILY_QUERY_BUDGET, type Enqueue, scheduledMonitoringHandler, syncThreadsNowHandler, syncWorkspaceKeywordsHandler } from "../discovery/monitoring";
 import { db } from "../utils/admin";
 import type { CallContext } from "../utils/context";
 import { decryptSecret } from "../utils/crypto";
@@ -208,7 +208,7 @@ describe("monitoring (DoD Fase 4)", () => {
     const first = await syncWorkspaceKeywordsHandler({ ...deps(), enqueue }, { workspaceId });
     const second = await syncWorkspaceKeywordsHandler({ ...deps(NOW + 3600_000), enqueue }, { workspaceId });
 
-    expect(first).toMatchObject({ queried: 2, created: 1 });
+    expect(first).toMatchObject({ queried: 2, created: 1, ownPostsSkipped: 1 });
     expect(second).toMatchObject({ queried: 2, created: 0 });
     const posts = await db.collection(`workspaces/${workspaceId}/socialPosts`).get();
     expect(posts.docs.map((d) => d.id)).toEqual(["threads_1"]); // pendek & milik sendiri dibuang
@@ -272,6 +272,9 @@ describe("monitoring (DoD Fase 4)", () => {
 
     await db.doc(`workspaces/${workspaceId}/settings/automation`).update({ monitoringEnabled: false });
     expect(await scheduledMonitoringHandler({ db, enqueue }, NOW + 2 * 3600_000)).toEqual({ due: 1, enqueued: 0 });
+    // Monitoring nonaktif dicek lagi di putaran berikutnya (15 menit), bukan 1 jam.
+    const next = (await accountRef(db, workspaceId).get()).get("nextSyncAt") as Timestamp;
+    expect(next.toMillis()).toBe(NOW + 2 * 3600_000 + 15 * 60_000);
   });
 });
 
@@ -299,5 +302,24 @@ describe("callback Meta (signed_request)", () => {
     const body = deletion.body as { url: string; confirmation_code: string };
     expect(body.url).toContain(`deletion=${body.confirmation_code}`);
     expect((await db.doc(`dataDeletionRequests/${body.confirmation_code}`).get()).get("status")).toBe("completed");
+  });
+});
+
+describe("sinkron manual", () => {
+  it("Owner/Admin bisa memicu sinkron; dibatasi sekali per 5 menit", async () => {
+    await connect();
+    await expectCode(syncThreadsNowHandler({ db, enqueue, now: () => NOW }, vic, { workspaceId }), "permission-denied");
+    expect(await syncThreadsNowHandler({ db, enqueue, now: () => NOW }, alice, { workspaceId })).toEqual({ queued: true });
+    expect(queued).toEqual([{ queue: "syncWorkspaceKeywords", payload: { workspaceId } }]);
+    await expectCode(syncThreadsNowHandler({ db, enqueue, now: () => NOW + 60_000 }, alice, { workspaceId }), "resource-exhausted");
+    expect(await syncThreadsNowHandler({ db, enqueue, now: () => NOW + 6 * 60_000 }, alice, { workspaceId })).toEqual({ queued: true });
+  });
+
+  it("ditolak untuk akun belum terhubung/kedaluwarsa dan workspace demo", async () => {
+    await expectCode(syncThreadsNowHandler({ db, enqueue }, alice, { workspaceId }), "failed-precondition");
+    await connect();
+    await accountRef(db, workspaceId).update({ status: "expired" });
+    await expectCode(syncThreadsNowHandler({ db, enqueue }, alice, { workspaceId }), "failed-precondition");
+    expect(queued).toEqual([]);
   });
 });

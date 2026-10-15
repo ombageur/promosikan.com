@@ -16,6 +16,7 @@ import {
   getThreadsAccount,
   listMonitoringRuns,
   startThreadsOAuth,
+  syncThreadsNow,
   THREADS_DAILY_QUERY_BUDGET,
   type ThreadsAccount,
 } from "@/services/threads";
@@ -44,6 +45,8 @@ export function ThreadsCard() {
   const queryClient = useQueryClient();
   const [params, setParams] = useSearchParams();
   const [confirm, setConfirm] = useState(false);
+  // Setelah sinkron manual dikirim, riwayat dimuat ulang berkala selama 2 menit agar hasilnya muncul.
+  const [pollUntil, setPollUntil] = useState(0);
   const live = !workspace.isDemo && !isPublicDemo;
   const settings = useAutomationSettings();
 
@@ -52,6 +55,7 @@ export function ThreadsCard() {
     queryKey: ["monitoring-runs", workspace.id],
     queryFn: () => listMonitoringRuns(workspace.id),
     enabled: live && account.data?.status === "connected",
+    refetchInterval: () => (Date.now() < pollUntil ? 10_000 : false),
   });
 
   // Hasil redirect OAuth (?threads=connected|denied|error) ditampilkan sekali lalu dibersihkan dari URL.
@@ -68,6 +72,14 @@ export function ThreadsCard() {
   const connect = useMutation({
     mutationFn: () => startThreadsOAuth({ workspaceId: workspace.id }),
     onSuccess: ({ url }) => window.location.assign(url),
+    onError: (error) => toast.error(errorMessage(error)),
+  });
+  const syncNow = useMutation({
+    mutationFn: () => syncThreadsNow({ workspaceId: workspace.id }),
+    onSuccess: () => {
+      toast.success("Sinkron dimulai. Hasil muncul di riwayat dalam 1–2 menit.");
+      setPollUntil(Date.now() + 2 * 60_000);
+    },
     onError: (error) => toast.error(errorMessage(error)),
   });
   const disconnect = useMutation({
@@ -157,6 +169,16 @@ export function ThreadsCard() {
                 </Link>
               </p>
             )}
+            {data.status === "connected" && (
+              <p className="rounded-md bg-secondary p-2 text-xs text-secondary-foreground">
+                Sampai izin <code>threads_keyword_search</code> disetujui lewat App Review Meta, pencarian hanya menemukan post milik
+                akun @{data.username} sendiri — dan post milik sendiri sengaja dilewati karena bukan calon pelanggan. Hasil “0 baru” pada
+                tahap ini wajar.
+              </p>
+            )}
+            {runs.data && runs.data.length === 0 && data.status === "connected" && (
+              <p className="text-xs text-muted-foreground">Belum ada sinkron. Aktifkan monitoring atau klik “Sinkron sekarang”.</p>
+            )}
             {runs.data && runs.data.length > 0 && (
               <div>
                 <p className="mb-1 text-xs font-medium text-muted-foreground">Riwayat sinkron</p>
@@ -166,6 +188,7 @@ export function ThreadsCard() {
                       <span>{fmt(run.startedAt)}</span>
                       <span className="text-muted-foreground">
                         {run.keywordsQueried} keyword · {run.postsFound} ditemukan · {run.postsNew} baru
+                        {(run.ownPostsSkipped ?? 0) > 0 && ` · ${run.ownPostsSkipped} milik sendiri dilewati`}
                         {run.stopReason === "rate_limit" && " · batas API"}
                         {run.stopReason === "budget" && " · kuota harian"}
                       </span>
@@ -176,6 +199,12 @@ export function ThreadsCard() {
             )}
             {manage && (
               <div className="flex flex-wrap items-center gap-2">
+                {data.status === "connected" && (
+                  <Button onClick={() => syncNow.mutate()} disabled={syncNow.isPending}>
+                    <RefreshCw aria-hidden />
+                    {syncNow.isPending ? "Mengirim…" : "Sinkron sekarang"}
+                  </Button>
+                )}
                 {data.status !== "connected" && (
                   <Button onClick={() => connect.mutate()} disabled={connect.isPending}>
                     <RefreshCw aria-hidden />
